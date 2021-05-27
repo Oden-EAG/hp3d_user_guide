@@ -1,3 +1,10 @@
+## MacOS
+.DS_Store
+
+## Custom
+hp3d_user_guide.pdf
+Icon*
+
 ## Core latex/pdflatex auxiliary files:
 *.aux
 *.lof
