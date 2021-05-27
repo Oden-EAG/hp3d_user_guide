@@ -1,0 +1,117 @@
+Please follow the following conventions when contributing to the LaTeX document.
+
+1. Float placement
+   By default, place all floating environments (e.g., figure, table) by using [htb]:
+   For example, \begin{figure}[htb]
+   Use [H] to force exact figure placement if absolutely necessary.
+
+2. Labeling of chapter, sections, equations, etc.
+   Use common prefixes as follows:
+   \begin{equation} ...
+   \label{eq:label_name}
+
+   \begin{figure} ...
+   \label{fig:label_name}
+
+   \begin{table} ...
+   \label{tab:label_name}
+
+   \begin{chapter} ...
+   \label{chap:label_name}
+
+   \begin{section} ...
+   \label{sec:label_name}
+
+   \begin{appendix chapter} ...
+   \label{app:label_name}
+
+   \begin{theorem} ...
+   \label{thm:label_name}
+
+   \begin{lemma} ...
+   \label{lem:label_name}
+
+   \begin{corollary} ...
+   \label{cor:label_name}
+
+   \begin{proposition} ...
+   \label{prop:label_name}
+
+   \begin{definition} ...
+   \label{def:label_name}
+
+   \begin{remark} ...
+   \label{rem:label_name}
+
+3. Referring to labeled environments
+   Figure~\ref{fig:label_name}
+   Table~\ref{tab:label_name}
+
+4. Referencing articles
+   Custom bibliography files, placed in the References directory, should use journal keys as defined in "journals-iso4.bib" and "journals-full.bib". For examples, see bibliography entries in "ref_stefan.bib".
+
+5. Text fonts
+   a) Use GLOBAL DEFINITIONS:
+      i)    Use \file{code.F90} for file names
+      ii)   Use \routine{nelcon} for subroutines and functions
+      iii)  Use \var{NODES} and code variables
+      iv)   Use \hp3D when referring to hp3D code
+
+6. Environments
+   a) Math Equations
+   b) Algorithms
+   c) Theorems, Lemmas, etc.
+   d) Remarks, etc.
+
+7. Section hierarchy
+   a) Chapter -> Section -> Subsection -> Paragraph
+   b) Do not use subsubsection
+   d) Chapter and Section titles have capitalized significant words
+   e) Paragraphs are only capitalized like normal text
+   f) Chapter and Section titles do not end 
+   c) Paragraphs end with a period "."
+
+8. Table and Figure Titles
+   a) Place captions below the table or figure:
+      \begin{table}
+         [table content]
+         \caption[Short Table Caption Title for LoT]{Table caption}
+         \label{tab:table-label}
+      \end{table}
+   b) Define Short Table/Figure Caption Titles for the List of Figures (LoF) / List of Tables (LoT)
+   
+9. Algorithms
+   a) Pseudo-Code [algorithm package]
+      Sometimes, a pseudo-code example is helpful to illustrate the underlying algorithm, instead of showing the code line-by-line. For example,
+      \begin{algorithm}[htb]
+         \begin{algorithmic}
+            \STATE $\bs E \gets \bs 0$
+            \FOR{$i=1$ \TO $i_{\text{max}}$}
+            \ENDFOR
+         \end{algorithmic}
+         \caption{Nonlinear gain problem: Picard iteration}
+         \label{alg:optical-fiber-Picard}
+      \end{algorithm}
+   b) Code Snippets [listing package]
+      To include actual code snippets, use the lstlisting environment defined by the listing package. For example,
+      \begin{lstlisting}
+         do iv=1,Nvert(type)
+            ...
+         enddo
+      \end{lstlisting}
+
+10. Table Style
+    Do not use vertical lines in a Table. The Table should also be enclosed by toprule and bottomrule commands provided by the booktabs package.
+    \begin{table}[htb]
+        \centering
+        \begin{tabular}{@{}cc@{}}
+           \toprule
+              column 1 & column 2 \\
+           \midrule
+              entry 1 & entry 2 \\
+              \vdots & \vdots \\
+           \bottomrule
+        \end{tabular}
+        \caption[Short Caption Title]{Full Table Caption.}
+        \label{tab:label_name}
+     \end{table}

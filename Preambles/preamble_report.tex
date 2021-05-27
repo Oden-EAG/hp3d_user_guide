@@ -1,0 +1,203 @@
+%=====================================================%
+% Packages
+\usepackage[T1]{fontenc}
+\usepackage[latin1]{inputenc}
+\usepackage[english]{babel}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{array}
+\newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}p{#1}}
+\newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}p{#1}}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{titletoc}
+\usepackage[page,toc,title,titletoc]{appendix} %page,toc,titletoc,title
+%\setcounter{tocdepth}{1} % Display Chapters only in ToC
+%\setcounter{secnumdepth}{3}
+\usepackage{xfrac}
+\usepackage{placeins}
+\usepackage{bm}
+\usepackage{amsthm}
+%\usepackage[dvipsnames]{xcolor}
+\usepackage[x11names]{xcolor}
+\usepackage{comment}
+%\usepackage{diagbox}
+\usepackage{arydshln}
+\usepackage{changepage}
+\usepackage{booktabs} % nice tables
+
+\usepackage{verbatim} % verbatim environment ignores LaTeX commands
+
+%=====================================================%
+% Main bib files
+\usepackage[backend=bibtex]{biblatex}
+\addbibresource{References/journals-iso4.bib}
+\addbibresource{References/ref_stefan.bib}
+%=====================================================%
+
+%=====================================================%
+% Colors
+  \definecolor{ICES}{RGB}{94, 156, 174}
+  \definecolor{ORANGE}{RGB}{191, 87, 0}
+  \definecolor{RED}{RGB}{190, 30, 49}
+  \definecolor{SUN}{RGB}{227, 81, 51}
+  \definecolor{GREEN}{RGB}{0, 171, 86}
+  \definecolor{BLUE}{RGB}{11, 78, 179}
+  \definecolor{BROWN}{RGB}{122, 80, 40}
+  \definecolor{GREY}{RGB}{50, 50, 50}
+  \definecolor{TEAL}{RGB}{0, 160, 176}
+%=====================================================%
+
+%=====================================================%
+% More packages
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolor}{rgb}{0.95,0.95,0.92}
+\usepackage{listings} % used for code snippets
+\lstset{language=[90]Fortran}
+\lstset{tabsize=3}
+\lstset{breaklines=true}
+\lstset{basicstyle=\linespread{1.4}\footnotesize\ttfamily}
+%\lstset{basicstyle=\sffamily}
+%\lstset{basicstyle=\ttfamily}
+\lstset{frame=tb}
+\lstset{captionpos=b}
+\lstset{columns=flexible}
+%\lstset{backgroundcolor=\color{GREY!10}}
+\lstset{backgroundcolor=\color{backcolor}}
+\lstset{commentstyle=\color{codegreen}}
+\lstset{keywordstyle=\color{magenta}}
+\lstset{numberstyle=\tiny\color{codegray}}
+\lstset{stringstyle=\color{codepurple}}
+\lstset{morecomment=[l][\color{TEAL}]{!$OMP}}
+
+%=====================================================%
+
+\usepackage{csquotes} % When using babel or polyglossia with biblatex, loading csquotes is recommended to ensure that quoted texts are typeset according to the rules of your main language.
+
+%\usepackage[margin=1in]{geometry}
+
+\usepackage{colortbl}
+\usepackage{tcolorbox}
+\usepackage{booktabs}
+
+\usepackage{enumitem}
+
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
+
+% Load fonts in all sizes: see https://tex.stackexchange.com/questions/58087/how-to-remove-the-warnings-font-shape-ot1-cmss-m-n-in-size-4-not-available
+%\usepackage{lmodern}
+\usepackage{anyfontsize}
+
+\usepackage[ruled]{algorithm2e}
+\usepackage{algorithmic}
+
+% Index
+\usepackage{imakeidx}
+\makeindex[columns=2, title=Alphabetical Index, intoc]
+
+%=====================================================%
+% Formatting
+\setlength{\parindent}{30pt} % Paragraph indentation
+\setlength{\parskip}{1ex} % Paragraph vertical spacing (can make trouble with ToC spacing; fixed with tocloft \cftparskip command)
+
+\usepackage[doublespacing]{setspace} % control line spacing
+
+%=====================================================%
+% Title options (Chapter, section, etc.)
+\usepackage{tocloft}
+%\renewcommand\cftchapafterpnum{\vskip10pt}
+%\renewcommand\cftsecafterpnum{\vskip-2pt}
+%\renewcommand\cftsubsecafterpnum{\vskip-2pt}
+%\setlength{\cftbeforesecskip}{-1ex}
+%\setlength{\cftbeforesubsecskip}{-1ex}
+%\setlength{\cftbeforefigskip}{-1ex}
+%\setlength{\cftbeforetabskip}{-1ex}
+%\setlength{\cftbeforechapskip}{1ex}
+\setlength{\cftbeforetoctitleskip}{40pt} % extra margin on ToC page [default 50pt]
+\setlength{\cftaftertoctitleskip}{30pt} % extra margin on ToC page [default 40pt]
+\setlength{\cftbeforelottitleskip}{40pt} % extra margin on ToC page [default 50pt]
+\setlength{\cftafterlottitleskip}{30pt} % extra margin on ToC page [default 40pt]
+\setlength{\cftbeforeloftitleskip}{40pt} % extra margin on ToC page [default 50pt]
+\setlength{\cftafterloftitleskip}{30pt} % extra margin on ToC page [default 40pt]
+
+\renewcommand{\cftchapleader}{\cftdotfill{\cftchapdotsep}}
+\renewcommand{\cftchapdotsep}{\cftdotsep} % Puts dots after chapter entries
+
+\renewcommand{\cftchapnumwidth}{1.05in}
+\renewcommand{\cftchappresnum}{\chaptername\space} %
+\renewcommand{\cftchapaftersnum}{.}
+
+\makeatletter
+\g@addto@macro\appendix{%
+  \addtocontents{toc}{%
+    \protect\renewcommand{\protect\cftchappresnum}{\appendixname\space}%
+  }%
+}
+\g@addto@macro\appendix{%
+  \addtocontents{toc}{%
+    \protect\renewcommand{\protect\cftchapnumwidth}{1.2in}%
+  }%
+}
+\makeatother
+
+\setlength{\cftparskip}{1ex}
+
+\usepackage{titlesec}
+\titleformat{\chapter}[display]{\large \bfseries \center}{Chapter \thechapter}{20pt}{\large}
+\titleformat{\section}{\normalsize \bfseries \raggedright}{\thesection}{20pt}{\normalsize}
+\titleformat{\subsection}{\normalsize \bfseries \raggedright}{\thesubsection}{10pt}{\normalsize}
+
+\renewcommand{\appendixtocname}{Appendices}
+\renewcommand{\appendixpagename}{\large Appendices}
+
+%\titlecontents{chapter}% <section-type>
+ % [0pt]% <left>
+ % {}% <above-code>
+%  {\bfseries\chaptername\ \thecontentslabel.\quad}% <numbered-entry-format>
+%  {\bfseries}% <numberless-entry-format>
+%  {\bfseries\hfill\contentspage}% <filler-page-format>
+
+%\titleformat{\section}{\normalfont\bfseries}{\thesection}{1em}{}
+%\titlespacing*{\section}{0pt}{*1.5}{1ex}
+
+%=====================================================%
+% Rule of thumb: load hyperref as the last package; other packages might otherwise redefine 'footnote', etc.
+%\usepackage[pdftex]{hyperref}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{colorlinks=false}
+
+%=====================================================%
+% Equation numbering
+\numberwithin{equation}{chapter}
+%\numberwithin{equation}{section}
+
+%=====================================================%
+% Paths
+\graphicspath{{Figures/}}
+
+%=====================================================%
+% Suppressing unnecessary console warnings:
+% pdfTeX: set pdf version
+\pdfminorversion=6
+% pdfTeX: see https://tex.stackexchange.com/questions/76273/multiple-pdfs-with-page-group-included-in-a-single-page-warning/78020#78020
+\pdfsuppresswarningpagegroup=1
+
+%=====================================================%
+% Theorem environments
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{corollary}{Corollary}[chapter]
+\newtheorem{lemma}{Lemma}[chapter]
+\newtheorem{proposition}{Proposition}[chapter]
+\newtheorem{axiom}{Axiom}[chapter]
+\newtheorem{definition}{Definition}[chapter]
+\newtheorem{remark}{Remark}[chapter]
+\newtheorem{notation}{Notation}[chapter]
+
+

@@ -1,0 +1,103 @@
+%=====================================================%
+% Custom Typedefs
+\newcommand{\revised}[1]{\textcolor{red}{#1}}
+%\newcommand{\revised}[1]{#1}
+
+% Font for code variables
+\newcommand{\var}[1]{\textcolor{SUN}{\texttt{#1}}}
+
+% Font for inline code
+\newcommand{\code}[1]{\texttt{#1}}
+
+% Font for file names
+\newcommand{\file}[1]{\textcolor{BROWN}{\texttt{#1}}}
+
+% Font for subroutine/function names
+\newcommand{\routine}[1]{\textcolor{BLUE}{\texttt{#1}}}
+
+\newcommand{\eq}[1]{(\ref{eq:#1})}
+\newcommand{\fig}[1]{\ref{fig:#1}}
+\newcommand{\tab}[1]{\ref{tab:#1}}
+
+\def\hp3D{$hp$3D}
+\def\NODES{\var{NODES}}
+\def\ELEMS{\var{ELEMS}}
+\def\subd{\var{subd}}
+
+\newcommand{\signature}{\makebox[\textwidth]{\hrulefill}}
+\newcommand{\bb}[1]{\mathbb{#1}}
+\newcommand{\mc}[1]{\mathcal{#1}}
+\newcommand{\mf}[1]{\mathfrak{#1}}
+\newcommand{\mr}[1]{\mathrm{#1}}
+\newcommand{\tc}[1]{\textcolor{#1}}
+\newcommand{\trial}{\mathcal{U}}
+\newcommand{\trials}{\mathcal{S}}
+\newcommand{\test}{\mathcal{V}}
+\newcommand{\Rv}{\mc{R}_\test}
+\newcommand{\Rvr}{\mc{R}_{\test^r}}
+\newcommand{\testt}{\mathcal{W}}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+\newcommand{\p}{\partial}
+\newcommand{\bs}{\boldsymbol}
+\newcommand{\ex}{\bs{\hat e_x}}
+\newcommand{\ey}{\bs{\hat e_y}}
+\newcommand{\ez}{\bs{\hat e_z}}
+\newcommand{\er}{\bs{\hat e_r}}
+\newcommand{\et}{\bs{\hat e_\theta}}
+\newcommand{\nE}{\bs {\hat{E}}}
+\newcommand{\nH}{\bs {\hat{H}}}
+\newcommand{\Jf}{\bs{\mc J}_{\hspace{-3pt}f}}
+\newcommand{\Jd}{\bs{\mc J}_{\hspace{-3pt}d}}
+\newcommand{\Jb}{\bs{\mc J}_{\hspace{-3pt}b}}
+\newcommand{\Jp}{\bs{\mc J}_{\hspace{-3pt}p}}
+\newcommand{\TE}{\text{TE}}
+\newcommand{\TM}{\text{TM}}
+\newcommand{\HE}{\text{HE}}
+\newcommand{\EH}{\text{EH}}
+\newcommand{\LP}{\text{LP}}
+\newcommand{\NA}{\text{NA}}
+\newcommand{\Nex}{\mc{N}^{\text{Yb}}_{\text{excited}}}
+\newcommand{\Ngr}{\mc{N}^{\text{Yb}}_{\text{ground}}}
+\newcommand{\Ntotal}{\mc{N}^{\text{Yb}}_{\text{total}}}
+\newcommand{\abs}{\sigma^{\text{abs}}}
+\newcommand{\ems}{\sigma^{\text{ems}}}
+\newcommand{\ga}{\tilde g_a}
+\newcommand{\gR}{\tilde g_R}
+\newcommand{\UpsilonR}{\Upsilon_{\hspace{-2pt}R}}
+\newcommand{\dT}{\delta T}
+\newcommand{\ndT}{\delta \hat T}
+\newcommand{\bT}{\bar T}
+\newcommand{\dt}{\delta t}
+\newcommand{\nt}{\hat t}
+\newcommand{\dn}{\delta n}
+\newcommand{\bn}{\bar n}
+\newcommand{\dndT}{\frac{dn}{dT}}
+\newcommand{\az}{\tilde \alpha_z}
+\newcommand{\Lz}{\tilde \Lambda_z}
+\newcommand{\rcore}{r_\text{core}}
+\newcommand{\rclad}{r_\text{clad}}
+\newcommand{\ncore}{n_\text{core}}
+\newcommand{\nclad}{n_\text{clad}}
+\newcommand{\tildencore}{\tilde n_\text{core}}
+\newcommand{\tildenclad}{\tilde n_\text{clad}}
+\newcommand{\Gammah}{\Gamma_{\hskip -1pt h}}
+\newcommand{\nablah}{\nabla_{\hskip -1pt h}}
+\def\dint{\displaystyle\int}
+\def\dsum{\displaystyle\sum}
+\def\grad{\nabla}
+\def\tgrad{\text{grad}}
+\def\curl{\nabla \times}
+\def\tcurl{\text{curl}}
+\def\div{\nabla \cdot}
+\def\tdiv{\text{div}}
+\def\ncurl{\hat \nabla \times}
+\def\hcurl{\nabla_{\hspace{-1pt}h} \times}
+\def\hHcurl{H(\text{curl}, \Omega_h)}
+\def\hHdiv{H(\text{div}, \Omega_h)}
+\def\Hcurl{H(\text{curl}, \Omega)}
+\def\Hdiv{H(\text{div}, \Omega)}
+\def\lb{\langle}
+\def\rb{\rangle}
+\def\rr{\rangle}
+% Math ops
+\DeclareMathOperator*{\argmin}{arg\,min}

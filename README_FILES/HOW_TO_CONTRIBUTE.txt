@@ -1,0 +1,9 @@
+1) LaTeX Document:
+
+ a) Removed dependency on external files. Currently using a default LaTeX book template which will need to be refined and customized (not a priority at the moment--focus on content instead). Assume that formatting will change substantially before publication (font type, size, margins, etc.).
+
+ b) Please FOLLOW CONVENTIONS for keeping the document hierarchy consistent and simplify merging content later on. Conventions are detailed in README-FILES/CONVENTIONS.txt
+
+ c) Preamble files are available -- please only modify own files (e.g., preamble_leszek.tex) custom newcommand, etc., but discuss adding new packages before doing so because of compatibility issues. Do not overwrite existing commands (had to merge conventions of different preamble definitions already -- curl/tcurl).
+
+ d) Figure directory. Avoid including large file sizes (aim for figures with vector graphics with < 1 MB file size).

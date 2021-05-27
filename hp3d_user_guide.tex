@@ -1,0 +1,82 @@
+\documentclass[11pt]{report}
+
+\input{Preambles/preamble_report}
+\input{Preambles/preamble_stefan}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\baselineskip=16pt
+\parskip=4pt
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% TITLE PAGE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{titlepage}
+\title
+{
+hp3D User Guide
+}
+\author
+{
+\Large
+Leszek Demkowicz, Stefan Henneking
+}
+\maketitle
+
+%\institute
+%{
+%\large \bf 
+%Oden Institute for Computational Engineering and Sciences\\
+%The University of Texas at Austin\\ 
+%Austin, TX. 2021.
+%}
+\end{titlepage}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% TABLE OF CONTENTS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\tableofcontents
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% CHAPTERS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% CHAPTER 1: INTRODUCTION
+\graphicspath{{Figures/1_INTRODUCTION/}}
+\input{Chapters/1_INTRODUCTION/introduction_chapter}
+
+% CHAPTER 2: INSTALLING
+\graphicspath{{Figures/2_INSTALLING/}}
+\input{Chapters/2_INSTALLING/installing_chapter}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% APPENDICES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\appendixpage
+% \appendix
+
+% \titleformat{\chapter}[display]{\large \bfseries \center}{Appendix \thechapter}{20pt}{\large}
+% \graphicspath{{Figures/APPENDIX_A_EXAMPLES/}}
+% \input{Chapters/APPENDIX_A_EXAMPLES/appendix_examples_chapter}
+
+% \graphicspath{{Figures/APPENDIX_B_HP3D/}}
+% \input{Chapters/APPENDIX_B_HP3D/appendix_hp3d_chapter}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% REFERENCES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% \phantomsection
+% \addcontentsline{toc}{chapter}{Bibliography}
+% \printbibliography
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% INDEX
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \printindex
+
+\end{document}
+
+
