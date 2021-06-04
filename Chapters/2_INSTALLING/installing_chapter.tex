@@ -1,5 +1,5 @@
 %
-%!TEX root = ../../book.tex
+%!TEX root = ../../hp3D_user_guide.tex
 %
 
 \chapter{Installing the \hp3D Code}
@@ -7,8 +7,27 @@
 
 %--------------------------------------------------------------------
 
+An application written for the \hp3D software is compiled in two steps. First, the \hp3D library itself is compiled; second, the particular application, which must be linked to the \hp3D library, is compiled. Changes to the application take effect by recompiling only the application, whereas changes to the underlying library source code take effect only if both the library and the application are recompiled.
 
+Under most circumstances, the user will not need to recompile the \hp3D library since changes in the application do not affect the library source code. Therefore, most users will only compile the \hp3D library once, and from then on exclusively modify and compile the application code.
 
-%\input{Chapters/2_PRELIMINARIES/comments}
+In some instances, the user may wish to change the dependencies of the library, e.g., linking to a new version of a third-party package, which will require recompilation of the library. Another situation for which the library must be recompiled is if the user chooses to toggle one of the library-wide preprocessor variables (e.g., \var{DEBUG}) or modify the compiler arguments. It is recommended that \code{make clean} is always executed before recompiling the \hp3D library.
+
+\section{Dependencies}
+\label{sec:dependencies}
+
+\section{Configure file}
+\label{sec:configure-file}
+
+\var{COMPLEX},
+\var{DEBUG}
+
+\section{Compiling the library}
+\label{sec:compiling}
+
+\section{Compiling an application}
+\label{sec:application}
+
+%\input{Chapters/2_INSTALLING/comments}
 
 

@@ -14,15 +14,14 @@
 % TITLE PAGE
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{titlepage}
-\title
-{
-hp3D User Guide
-}
+\title{hp3D User Guide}
 \author
 {
 \Large
-Leszek Demkowicz, Stefan Henneking
+Leszek Demkowicz, 
+Stefan Henneking
 }
+\date{June 2021}
 \maketitle
 
 %\institute
@@ -51,18 +50,23 @@ Leszek Demkowicz, Stefan Henneking
 \graphicspath{{Figures/2_INSTALLING/}}
 \input{Chapters/2_INSTALLING/installing_chapter}
 
+% CHAPTER 3: BASICS
+\graphicspath{{Figures/3_BASICS/}}
+\input{Chapters/3_BASICS/basics_chapter}
+
+% CHAPTER 4: ADVANCED
+\graphicspath{{Figures/4_ADVANCED/}}
+\input{Chapters/4_ADVANCED/advanced_chapter}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % APPENDICES
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\appendixpage
-% \appendix
+% \appendixpage
+\appendix
 
 % \titleformat{\chapter}[display]{\large \bfseries \center}{Appendix \thechapter}{20pt}{\large}
-% \graphicspath{{Figures/APPENDIX_A_EXAMPLES/}}
-% \input{Chapters/APPENDIX_A_EXAMPLES/appendix_examples_chapter}
-
-% \graphicspath{{Figures/APPENDIX_B_HP3D/}}
-% \input{Chapters/APPENDIX_B_HP3D/appendix_hp3d_chapter}
+\graphicspath{{Figures/APPENDIX_A_EXAMPLES/}}
+\input{Chapters/APPENDIX_A_EXAMPLES/appendix_examples_chapter}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % REFERENCES

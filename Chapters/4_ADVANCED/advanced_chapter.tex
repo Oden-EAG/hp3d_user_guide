@@ -1,0 +1,44 @@
+%
+%!TEX root = ../../hp3D_user_guide.tex
+%
+
+\chapter{Advanced Topics}
+\label{chap:advanced}
+
+%--------------------------------------------------------------------
+
+\section{Custom Boundary Conditions}
+\label{sec:advanced-BC}
+
+In the preceding chapter, it was shown how to set up basic Dirichlet boundary conditions for a variable. In this section, some custom options for setting up various types of boundary conditions are discussed. Note that the \hp3D code allows the user to customize boundary conditions in an almost arbitrary way. A few common boundary conditions types are presented with the goal of introducing the general idea of customizing boundary conditions for an application.
+
+\subsection{Neumann boundary condition}
+\label{sec:impedance}
+\subsection{Impedance boundary condition}
+\label{sec:impedance}
+\subsection{Perfectly matched layer (PML)}
+\label{sec:pml}
+
+\section{Adaptive Refinements}
+\label{sec:adaptivity}
+
+This section gives an overview of the $hp$-adaptive capabilities of the \hp3D code. Note that the section does \emph{not} discuss the implementation of an error indicator function for guiding the mesh adaptivity, but rather introduces the mechanism of executing the adaptive refinements. It is assumed that some error indicator function, usually problem-dependent, is provided by the user and 
+
+Starting point is therefore the assumption that an array \var{elem\_ref} of size \var{nr\_elem\_ref} is present, where \var{nr\_elem\_ref} describes the number of elements that have been marked for refinement, and \var{elem\_ref} holds a list of element middle node numbers \code{mdle} of the respective elements.
+
+\section{Load Balancing}
+\label{sec:load-balancing}
+
+\section{Trace Variables}
+\label{sec:traces}
+
+\section{Coupled Variables}
+\label{sec:coupled-variables}
+\subsection{Strong coupling}
+\label{sec:strong-coupling}
+\subsection{Weak coupling}
+\label{sec:weak-coupling}
+
+%\input{Chapters/4_ADVANCED/comments}
+
+
