@@ -1,6 +1,6 @@
-# hp3D_user_guide
+# hp3d_user_guide
 User guide for hp3D finite element software.
-Software repository: https://github.com/ICES-EAG/par_hp3d
+Software repository: https://github.com/Oden-EAG/hp3d
 
 ## How to contribute
 Please see information in `README_FILES` directory.
