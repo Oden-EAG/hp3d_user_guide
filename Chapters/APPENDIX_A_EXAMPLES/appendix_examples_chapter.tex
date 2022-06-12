@@ -2,7 +2,7 @@
 %!TEX root = ../../hp3D_user_guide.tex
 %
 
-\chapter{Examples}
+\chapter{Model Problems}
 \label{chap:examples}
 
 %--------------------------------------------------------------------
@@ -10,11 +10,231 @@
 \section{Poisson Problems}
 \label{sec:poisson}
 
+Poisson equation with inhomogeneous Dirichlet BC:
+\begin{alignat*}{3}
+	- \div \nabla u &= f && \quad \text{in } \Omega \, , \\
+	u &= u_0 && \quad \text{on } \Gamma \, .
+\end{alignat*}
+
+Classical variational formulation:
+\[
+\left\{
+\begin{array}{llll}
+	u \in H^1(\Omega):  u = u_0 \text{ on } \Gamma \, , \\[5pt]
+	(\nabla u, \nabla v) = (f,v) \, ,
+	\quad v \in H^1(\Omega) \, : \, v = 0 \text{ on } \Gamma \, .
+\end{array}
+\right.
+\]
+
+\subsection{Galerkin implementation}
+\label{subsec:poisson-galerkin}
+
+Implementation in \file{problems/MPI\_POISSON/GALERKIN}.
+
+Input files:
+\begin{itemize}
+	\item \file{control}
+	\item \file{physics}
+	\item \file{geometry}
+\end{itemize}
+
+Driver and required routines:
+\begin{itemize}
+	\item \routine{main}
+	\item \routine{set\_initial\_mesh}
+	\item \routine{dirichlet}
+	\item \routine{elem}
+\end{itemize}
+
+Input files:
+\begin{itemize}
+\itemsep 15pt
+\item{
+\file{control}: sets global control variables, e.g.\\
+\begin{itemize}
+	\item \var{NEXACT} $\in \{$ \code{0,1} $\}$: indicates whether the exact solution is known.
+	\item \var{EXGEOM} $\in \{$ \code{0,1} $\}$: indicates whether isoparametric or exact-geometry elements are used.
+\end{itemize}
+}
+\item
+{
+\file{physics}: sets initially allocated nodes and physics variables.\\[5pt]
+\begin{lstlisting}[caption=\file{MPI\_POISSON/GALERKIN/input/physics} input file.]
+100000              MAXNODS, nodes anticipated
+1                   NR_PHYSA, physics attributes
+field   contin  1   H1 variable
+\end{lstlisting}
+\begin{itemize}
+	\vskip -5pt
+	\item \code{`field   contin  1'} specifies (nickname, approx.~space, num.~components) of a variable.
+	\item Approx.~spaces: $H^1$ -- \code{contin}, $H(\tcurl)$ -- \code{tangen}, $H(\tdiv)$ -- \code{normal}, $L^2$ -- \code{discon}.
+\end{itemize}
+}
+\item
+{
+\file{geometry}: defines the initial geometry mesh.
+}
+\end{itemize}
+
+Routine \routine{set\_initial\_mesh}: for \emph{each} initial mesh element, this routine sets
+\begin{itemize}
+	\item the supported physics variables;
+	\item the initial polynomial order of approximation;
+	\item the boundary condition flags for element faces on the boundary.
+\end{itemize}
+
+\begin{lstlisting}[caption=\file{MPI\_POISSON/GALERKIN/}\routine{set\_initial\_mesh} routine.]
+!..loop over initial mesh elements
+   do iel=1,NRELIS
+
+!  ...1. set physics
+      ELEMS(iel)%nrphysics = 1
+      allocate(ELEMS(iel)%physics(1))
+      ELEMS(iel)%physics(1) ='field'
+
+!  ...2. set initial order of approximation
+      select case(ELEMS(iel)%type)
+         case('tetr'); Nelem_order(iel) = 1*IP
+         case('pyra'); Nelem_order(iel) = 1*IP
+         case('pris'); Nelem_order(iel) = 11*IP
+         case('bric'); Nelem_order(iel) = 111*IP
+      end select
+
+!  ...3. set BC flags: 0 - no BC ; 1 - Dirichlet; 2-9 Custom BCs
+      ibc(1:6,1) = 0
+      do ifc=1,nface(ELEMS(iel)%type) ! loop through element faces
+         neig = ELEMS(iel)%neig(ifc)
+         select case(neig)
+            case(0); ibc(ifc,1) = 1
+         end select
+      enddo
+
+!  ...allocate BC flags (one per component), and encode face BCs into a single BC flag
+      allocate(ELEMS(iel)%bcond(1))
+      call encodg(ibc(1:6,1),10,6, ELEMS(iel)%bcond(1))
+   enddo
+\end{lstlisting}
+
+Routine \routine{dirichlet}:
+\begin{itemize}
+	\item User-provided routine required by the system routine \routine{update\_Ddof} which computes the Dirichlet DOFs for element nodes (vertices, edges, faces) with a non-homogeneous Dirichlet BCs. 
+	\item \routine{update\_Ddof} interpolates $H^1$, $H(\tcurl)$, $H(\tdiv)$ Dirichlet data using \emph{projection-based} interpolation.\footnote{\fullcite{demkowicz2008interp}}
+	\item Required only if non-homogeneous Dirichlet BCs have been set by the user in \routine{set\_initial\_mesh}.
+\end{itemize}
+
+\begin{lstlisting}[caption=\file{MPI\_POISSON/GALERKIN/common/}\routine{dirichlet} routine.]
+!  routine dirichlet: returns Dirichlet data at a point
+!     in:   Mdle          - middle node number
+!           X             - a point in physical space
+!           Icase         - node case (specifies what variables are supported)
+!     out:  ValH, DvalH   - value of the H1 solution, corresponding first derivatives
+!           ValE, DvalE   - value of the H(curl) solution, corresponding first derivatives
+!           ValV, DvalV   - value of the H(div) solution, corresponding first derivatives
+subroutine dirichlet(Mdle,X,Icase, ValH,DvalH,ValE,DvalE,ValV,DvalV)
+\end{lstlisting}
+
+Routine \routine{elem}:
+\begin{itemize}
+	\item User-provided routine that computes the element-local stiffness matrix and load vector.
+	\item System module \module{assembly} provides global arrays for this purpose:
+	\begin{itemize}
+		\item \var{ALOC(:,:)\%array}: Element-local stiffness matrix.
+		\item \var{BLOC(:)\%array}: Element-local load vector.
+		\item These arrays are declared \omp{omp threadprivate} for shared-memory parallel assembly of different element matrices with OpenMP threading.
+		\item \var{ALOC}, \var{BLOC} support coupled multiphysics problems (more about this later).
+	\end{itemize}
+\end{itemize}
+
+\routine{elem} is called during assembly for each middle node \var{Mdle} in the \emph{active mesh}.
+
+\begin{remark}
+Constrained approximation, modification for Dirichlet nodes, and static condensation of element-interior (bubble) DOFs are automatically done afterwards by the system routine \routine{celem\_system} which provides the \emph{modified element} matrices to the assembly procedure.
+\end{remark}
+
+\begin{lstlisting}[caption=\file{MPI\_POISSON/GALERKIN/common/}\routine{elem} routine]
+!..determine element type; number of vertices, edges, and faces
+   etype = NODES(Mdle)%type
+   nrv = nvert(etype); nre = nedge(etype); nrf = nface(etype)
+   
+!..determine order of approximation
+   call find_order(Mdle, norder)
+   
+!..determine edge and face orientations
+   call find_orient(Mdle, norient_edge,norient_face)
+   
+!..determine nodes coordinates
+   call nodcor(Mdle, xnod)
+   
+!..set quadrature points and weights
+   call set_3D_int(etype,norder,norient_face, nrint,xiloc,waloc)
+
+!  ....... element integrals:
+
+!..loop over integration points
+   do l=1,nrint
+
+!  ...coordinates and weight of this integration point
+      xi(1:3)=xiloc(1:3,l); wa=waloc(l)
+
+!  ...H1 shape functions (for geometry)
+      call shape3DH(etype,xi,norder,norient_edge,norient_face, nrdofH,shapH,gradH)
+
+!  ...geometry map
+      call geom3D(Mdle,xi,xnod,shapH,gradH,nrdofH, x,dxdxi,dxidx,rjac,iflag)
+
+!  ...integration weight
+      weight = rjac*wa
+
+!  ...get the RHS
+      call getf(Mdle,x, fval)
+
+!  ...loop through H1 test functions
+      do k1=1,nrdofH
+
+!     ...Piola transformation: $q \rightarrow \hat q$ and $\nabla q \rightarrow J^{-T} \hat \nabla \hat q$
+         q = shapH(k1)
+         dq(1:3) = gradH(1,k1)*dxidx(1,1:3) + gradH(2,k1)*dxidx(2,1:3) + gradH(3,k1)*dxidx(3,1:3)
+
+!     ...accumulate for the load vector: $(f,q)$
+         b_loc(k1) = b_loc(k1) + q*fval*weight
+
+!     ...loop through H1 trial functions
+         do k2=1,nrdofH
+
+!        ...Piola transformation: $p \rightarrow \hat p$ and $\nabla p \rightarrow J^{-T} \hat \nabla \hat p$
+            p = shapH(k2)
+            dp(1:3) = gradH(1,k2)*dxidx(1,1:3) + gradH(2,k2)*dxidx(2,1:3) + gradH(3,k2)*dxidx(3,1:3)
+
+!        ...accumulate for the stiffness matrix: $(\nabla p, \nabla q)$
+            a_loc(k1,k2) = a_loc(k1,k2) + weight * (dq(1)*dp(1) + dq(2)*dp(2) + dq(3)*dp(3))
+
+   enddo; enddo; enddo
+\end{lstlisting}
+
+\subsection{DPG Primal implementation}
+\label{subsec:poisson-ultraweak}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Linear Elasticity Problems}
 \label{sec:elasticity}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\subsection{Galerkin implementation}
+\label{subsec:maxwell-galerkin}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Maxwell Problems}
 \label{sec:maxwell}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Galerkin implementation}
+\label{subsec:maxwell-galerkin}
+
+\subsection{Ultraweak implementation}
+\label{subsec:maxwell-galerkin}
+
+
 
 %\input{Chapters/APPENDIX_A_EXAMPLES/comments}
 

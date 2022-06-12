@@ -8,7 +8,44 @@
 
 %--------------------------------------------------------------------
 
+The \hp3D finite element (FE) software has been developed by Prof.~Leszek Demkowicz and his students, postdocs, and collaborators at The University of Texas at Austin over the course of many years. The current version of the software is available at \url{https://github.com/Oden-EAG/hp3d}. This user manual was written to provide guidance to current and prospective users of \hp3D. We welcome any feedback about the user manual and the \hp3D code in general; please contact us at:
+\begin{itemize}
+	\item Prof.~Leszek Demkowicz: leszek@oden.utexas.edu
+	\item Dr.~Stefan Henneking: stefan@oden.utexas.edu
+\end{itemize}
 
+\paragraph{What and who is the \hp3D code written for?}
+The \hp3D code is an academic software. For this reason, \hp3D is different from other publicly available finite element codes (e.g., FEniCS, MFEM, deal.II, ...) in several important ways:
+
+\begin{itemize}
+\item Many of these modern codes are written with the aim to hide as much of the finite element machinery from the user as possible, leaving the user to only specify weak formulations, including boundary conditions, and other features of their application in abstract form. While this software design has several advantages, e.g.~fast prototyping of a new application, and may be seen as beginner-friendly, it does not at all expose the user to important FE concepts such as shape functions, Piola maps, and element-level integration. \hp3D distinguishes itself by exposing the user to these fundamental concepts and, for this reason, is conceptually aimed toward two different kinds of audiences:
+\begin{enumerate}
+	\item the novel FE user who is interested in learning 3D finite element coding technology; and 
+	\item the advanced FE user who is interested in having lower-level access to the software making it simpler to add custom, application-specific features to the code. 
+\end{enumerate}
+In \hp3D, there are only minimal abstraction layers between the lower-level data structures and the upper-level user application code. On the one hand, this direct access to data structures makes it straightforward to customize FE implementations; on the other hand, we advise that only advanced users attempt modifications of data structures that are part of the library code, because there are few safeguards protecting the user from introducing bugs. When questions about library features arise, our best advice is to contact the developers before attempting modifications.
+
+\item \hp3D includes a host of advanced finite element features such as isotropic and anisotropic $hp$-adaptivity for hybrid meshes of all element shapes, supporting conforming discretizations of the entire $H^1$--$H(\tcurl)$--$H(\tdiv)$--$L^2$ exact-sequence spaces. These features were built based on decades of experience in FE coding which went into developing optimized data structures for $hp$-adaptive finite element computation. The \hp3D data structures come with unique algorithms, including routines for constrained approximation and projection-based interpolation based on rigorous mathematical FE theory. For more information about the FE software design of the \hp3D library, we refer to \cite{hpbook2,hpbook3}. More recent additions include the support for trace variables needed for discretizations with the Discontinuous Petrov--Galerkin (DPG) method, as well as support for hybrid MPI/OpenMP-parallel computation, also detailed in \cite{hpbook3}.
+
+\item Unlike some other FE libraries, \hp3D does \emph{not} have a full-time developer team that is working to maintain or develop features for the software. Rather, the \hp3D development has depended on a small team of collaborators writing and testing newly developed features in the code. For this reason, there is no large support or developer team that can swiftly add features upon user request.
+
+\end{itemize}
+
+\paragraph{Is there a 2D version of the \hp3D code?} Yes, the two-dimensional $hp$2D FE software is conceptually equivalent to the 3D code with the exception that it does not support MPI-distributed parallel computation. However, we have so far not made it publicly available but we may do so in the future if there is an interest by the community. A former version of the 2D FE code was documented in:
+\begin{itemize}
+	\item \fullcite{hpbook}
+\end{itemize}
+
+\begin{remark}
+This is a preliminary version of the user manual for the \hp3D finite element software. The user manual is still being developed and updated. In addition to this user manual, the \hp3D code is documented in the following references and references therein:
+
+\begin{itemize}
+	\item \fullcite{hpbook2}
+	\item \fullcite{hpbook3}
+	\item \fullcite{fuentes2015shape}
+\end{itemize}
+
+\end{remark}
 
 %\input{Chapters/1_INTRODUCTION/comments}
 

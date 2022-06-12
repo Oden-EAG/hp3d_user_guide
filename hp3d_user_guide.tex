@@ -14,33 +14,75 @@
 % TITLE PAGE
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{titlepage}
-\title{hp3D User Guide}
+
+\title
+{
+\Huge
+\hp3D User Manual
+}
+
 \author
 {
-\Large
-Leszek Demkowicz, 
+\LARGE
 Stefan Henneking
+\hskip 40pt
+Leszek Demkowicz
 }
-\date{June 2021}
+
+\affil
+{
+\large \bf
+Oden Institute for Computational Engineering and Sciences\\
+\large \bf
+The University of Texas at Austin
+}
+
+\date
+{
+\large
+Austin, TX. \the\year{}.
+}
+
 \maketitle
 
-%\institute
-%{
-%\large \bf 
-%Oden Institute for Computational Engineering and Sciences\\
-%The University of Texas at Austin\\ 
-%Austin, TX. 2021.
-%}
 \end{titlepage}
+
+\clearpage
+\pagenumbering{roman}
+\setcounter{page}{2} 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ACKNOWLEDGEMENT
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter*{Acknowledgements}
+
+The authors would like to thank the developers and collaborators who have contributed to the development of the \hp3D software. In addition to the authors, the main contributors to the current version of the \hp3D finite element code are (in alphabetical order):
+
+\begin{itemize}
+	\itemsep 0pt
+	\item Jacob Badger
+	\item Federico Fuentes
+	\item Paolo Gatto
+	\item Brendan Keith
+	\item Kyungjoo Kim
+	\item Jaime D. Mora
+	\item Sriram Nagaraj
+	\item Socratis Petrides
+\end{itemize}
+
+Additionally, the authors would like to thank each one of the reviewers who have helped with writing and improving this user manual.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % TABLE OF CONTENTS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
 \tableofcontents
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % CHAPTERS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
+\pagenumbering{arabic}
 
 % CHAPTER 1: INTRODUCTION
 \graphicspath{{Figures/1_INTRODUCTION/}}
@@ -58,6 +100,10 @@ Stefan Henneking
 \graphicspath{{Figures/4_ADVANCED/}}
 \input{Chapters/4_ADVANCED/advanced_chapter}
 
+% CHAPTER 5: PARALLEL
+\graphicspath{{Figures/5_PARALLEL/}}
+\input{Chapters/5_PARALLEL/parallel_chapter}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % APPENDICES
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -68,13 +114,16 @@ Stefan Henneking
 \graphicspath{{Figures/APPENDIX_A_EXAMPLES/}}
 \input{Chapters/APPENDIX_A_EXAMPLES/appendix_examples_chapter}
 
+\graphicspath{{Figures/APPENDIX_B_APPLICATIONS/}}
+\input{Chapters/APPENDIX_B_APPLICATIONS/appendix_applications_chapter}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % REFERENCES
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% \phantomsection
-% \addcontentsline{toc}{chapter}{Bibliography}
-% \printbibliography
+\phantomsection
+\addcontentsline{toc}{chapter}{Bibliography}
+\printbibliography
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % INDEX

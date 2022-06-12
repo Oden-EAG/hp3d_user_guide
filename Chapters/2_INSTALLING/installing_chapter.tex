@@ -11,22 +11,98 @@ An application written for the \hp3D software is compiled in two steps. First, t
 
 Under most circumstances, the user will not need to recompile the \hp3D library since changes in the application do not affect the library source code. Therefore, most users will only compile the \hp3D library once, and from then on exclusively modify and compile the application code.
 
-In some instances, the user may wish to change the dependencies of the library, e.g., linking to a new version of a third-party package, which will require recompilation of the library. Another situation for which the library must be recompiled is if the user chooses to toggle one of the library-wide preprocessor variables (e.g., \var{DEBUG}) or modify the compiler arguments. It is recommended that \code{make clean} is always executed before recompiling the \hp3D library.
+In some instances, the user may wish to change the dependencies of the library, e.g., linking to a new version of a third-party package, which will require recompilation of the library. Another situation for which the library must be recompiled is if the user chooses to toggle one of the library-wide preprocessor variables (e.g., \var{DEBUG}) or modify the compiler arguments. It is recommended that \code{`make clean'} is always executed before recompiling the \hp3D library.
 
-\section{Dependencies}
+The user can download the \hp3D GitHub repository via https or ssh:
+\begin{itemize}
+	\item via https: \code{git clone https://github.com/Oden-EAG/hp3d.git}
+	\item via ssh: \code{git clone git@github.com:Oden-EAG/hp3d.git}
+\end{itemize}
+
+The main directory is then accessed by \code{`cd hp3d/trunk'}.
+
+\begin{remark}
+The \hp3D software has been deployed on a variety of UNIX-based systems. The code runs efficiently on personal laptops, including MacBooks, small workstations and clusters, all the way to large supercomputers. Currently, we are working on providing a new and more robust build system for the \hp3D library. We do not have any experience installing \hp3D on Windows-based systems and currently have no plans to add support for such systems.
+\end{remark}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Compiling the Library}
+\label{sec:compiling}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This section provides some basic instructions for installing the code. The user should be familiar with the system in order to provide file paths to the required third-party packages/dependencies.
+
+The \hp3D library is written exclusively in Fortran. The Fortran compiler must be compatible with the Fortran90 standard and the compiler must support the Message Passing Interface (MPI) (e.g.~OpenMPI, MPICH). The support for OpenMP threading is optional.
+
+\subsection{Dependencies}
 \label{sec:dependencies}
 
-\section{Configure file}
+The configure file \file{m\_options} (see next section) must link to valid paths for external libraries. The following external libraries are used:
+\begin{itemize}
+	\itemsep 0pt
+	\item Intel MKL [optional]
+	\item X11
+	\item PETSc (all following packages can be installed with PETSc)
+	\item HDF5/pHDF5
+	\item MUMPS
+	\item Metis/ParMetis
+	\item Scotch/PT-Scotch
+	\item PORD
+	\item Zoltan
+\end{itemize}
+
+\subsection{Configure File}
 \label{sec:configure-file}
 
-\var{COMPLEX},
-\var{DEBUG}
+The user must create a configure file \file{trunk/m\_options}, which provides information needed by the \file{makefile}. We recommend that the user copies an existing configure file and then modifies it as needed:
+\begin{enumerate}
+	\itemsep 0pt
+	\item{
+		Copy one of the existing \file{m\_options} files from the example files in \file{hp3d/trunk/m\_options\_files/} into \file{hp3d/trunk/}. For example:\\ 
+		\code{`cp m\_options\_files/m\_options\_TACC\_intel19 ./m\_options'}.
+	} \item{
+		Modify the \file{m\_options} file to set the correct path to the main directory:\\ 
+		Set the \var{HP3D\_BASE\_PATH} to the \emph{absolute} path of the \file{hp3d/trunk/}.
+	} \item{
+		To compile the library, type \code{`make'} in \file{hp3d/trunk/}. Before compiling, link to the external libraries by setting the correct paths in the \file{m\_options} file---e.g.~\var{PETSC\_LIB}, \var{PETSC\_INC}---as well as setting compiler options by modifying the \file{m\_options} file as described below.
+	}
+\end{enumerate}
 
-\section{Compiling the library}
-\label{sec:compiling}
+The library compilation is governed by the user-defined preprocessing flags \var{COMPLEX} and \var{DEBUG}:
+\begin{itemize}
+	\itemsep 0pt
+	\item{ \code{\var{COMPLEX} = 0}:\\
+	Stiffness matrix, load vector(s) and solution DOFs are real-valued.\\
+	Code blocks within: \code{\#if C\_MODE ... \#endif}, are disabled.
+	} \item{ \code{\var{COMPLEX} = 1}:\\
+	Stiffness matrix, load vector(s) and solution DOFs are complex-valued.\\
+	Code blocks within: \code{\#if C\_MODE ... \#endif}, are enabled.
+	} \item{ \code{\var{DEBUG} = 0}:\\
+	Compiler uses optimization flags and the library performs only minimal checks during the computation.\\
+	Code blocks within: \code{\#if DEBUG\_MODE ... \#endif}, are disabled.
+	} \item{ \code{\var{DEBUG} = 1}:\\
+	Compiler uses debug flags, and the library performs additional checks during the computation.\\
+	Code blocks within: \code{\#if DEBUG\_MODE ... \#endif}, are enabled.
+	}
+\end{itemize}
+All computations in \hp3D are executed in double-precision arithmetic; that is, depending on the \var{COMPLEX} flag, variables are declared as \code{real(8)} or \code{complex(8)}, respectively. \hp3D provides a generic variable declaration \var{VTYPE}, which may be employed by the user in the application, defaulting to either real- or complex-type depending on whether the library was compiled in real or complex mode. The user should keep in mind some external library paths may also differ depending on real- and complex-valued computation. When compiling the \hp3D library, the library path is created under either \file{hp3d/complex/} or \file{hp3d/real/}, depending on the choice of preprocessing flag \var{COMPLEX}.
 
-\section{Compiling an application}
+Support for OpenMP threading is optional and can be enabled/disabled via preprocessing flag \var{OPENMP}. Additional preprocessing flags for enabling/disabling third-party libraries:
+\begin{itemize}
+	\item{\code{\var{HP3D\_USE\_INTEL\_MKL} = 0}:\\
+	Dependency on Intel MKL package is disabled.
+	} \item{\code{\var{HP3D\_USE\_INTEL\_MKL} = 1}:\\
+	Dependency on Intel MKL package is enabled, providing additional solver options to the user (e.g.~Intel MKL PARDISO).}
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Compiling an Application}
 \label{sec:application}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Applications are implemented in \file{hp3d/trunk/problems/}. A few applications and model problems are provided in the public \hp3D repository and can serve as examples. For example, \file{problems/MPI\_POISSON/GALERKIN/} is a Galerkin FE implementation for the classical variational Poisson problem. To compile and run the problem, type \code{`make'} in the application folder, i.e.,\\
+\code{`cd problems/MPI\_POISSON/GALERKIN; make; ./run.sh'}.\\
+The implementation of this model problem is described in Appendix~\ref{subsec:poisson-galerkin}. Other model problems and applications are described in Appendices~\ref{chap:examples}--\ref{chap:applications}.
 
 %\input{Chapters/2_INSTALLING/comments}
 

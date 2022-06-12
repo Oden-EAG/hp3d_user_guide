@@ -7,7 +7,10 @@
 
 %--------------------------------------------------------------------
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{A Simple Example}
+\label{sec:simple-example}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \subsection{Input files}
 
@@ -24,11 +27,123 @@
 	\item \routine{dirichlet}
 \end{itemize}
 
-\subsection{Important user-defined variables}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Important global variables}
+\label{sec:global-variables}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{Uniform Mesh Refinements}
+The user should be familiar with some of \hp3D's global variables, some of which are system-generated and may be used within the application code, and others which are user-defined and instruct the library code.
 
-Both isotropic and anisotropic uniform refinements are easily executed.
+\paragraph{System-generated variables.}
+
+For example, \var{NR\_PHYSA}, \var{NRINDEX}.
+
+\paragraph{User-defined variables.}
+
+For example, static condensation module \module{stc}, which implements static condensation routines for local element matrices and is used by the system routine \routine{celem\_systemI} during assembly, lets the user define three variables:
+
+\begin{itemize}
+	\item {\var{ISTC\_FLAG} $\in \{$\code{.true.,.false.}$\}$\\
+		Enables/disables static condensation of bubble DOFs in element matrices.}
+	\item {\var{STORE\_STC} $\in \{$\code{.true.,.false.}$\}$\\
+		Enables/disables storing Schur complement factors (recomputed otherwise).}
+	\item {\var{HERM\_STC} $\in \{$\code{.true.,.false.}$\}$\\
+		Enables/disables optimized linear algebra routines for Hermitian matrices.}
+\end{itemize}
+
+Flags concerning physics attributes:
+\begin{itemize}
+	\item
+	{\code{\var{PHYSAd}(i)} $\in \{$\code{.true.,.false.}$\},$ \code{i=1,...,\var{NR\_PHYSA}}:\\ 
+	used for indicating a homogeneous Dirichlet BC.}
+	\item
+	{\code{\var{PHYSAi}(i)} $\in \{$\code{.true.,.false.}$\},$ \code{i=1,...,\var{NR\_PHYSA}}:\\ 
+	used for computing with traces (see Section~\ref{sec:traces}).}
+	\item 
+	{\code{\var{PHYSAm}(i)} $\in \{$\code{.true.,.false.}$\},$ \code{i=1,...,\var{NR\_PHYSA}}:\\ 
+	used for enabling/disabling physics attributes (see Section~\ref{sec:coupled-variables}).}
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Mesh Data Structure}
+\label{sec:data-structure}
+
+\paragraph{Module \module{element\_data}.}
+The code supports four types of elements: hexahedra (bricks), tetrahedra (tets), prisms, and pyramids. Any element computations are done in an object programming fashion using general element utilities provided in \module{modules/element\_data}. For instance, a simple loop through element vertices is executed by
+
+% Use lstlisting environment for code snippets
+\begin{lstlisting}[caption=Loop over element vertices., label={lst:loop_element_vertices}]
+do iv=1,Nvert(elem_type)
+   ...
+enddo
+\end{lstlisting}
+
+\noindent where \var{elem\_type} is a variable specifying the element type, and \routine{Nvert(\var{elem\_type})} is a function returning the number of vertices for each element type. In this way, we avoid writing four separate versions of the code for the four types of elements but cover all four cases with just one piece of code. Please review carefully content of the module to learn about the existing element utilities and the underlying logic. The module starts by listing master element coordinates for the four element vertices. This defines the geometry of master elements and establishes enumeration of master elements vertices. The element edges are listed next by providing numbers of the corresponding endpoint vertices. This again serves a double purpose: we enumerate the element edges and provide the corresponding {\em local edge orientations}. Finally, we list element faces by providing face to vertex nodes connectivities. This again implies the local face orientations. Finally, following the specified orientations, we provide local parametrizations for element edges and faces. All these utilities are necessary for computing element matrices. Please visit any element routine to see examples how to use the utilities provided in the module.
+
+\paragraph{Initial mesh generation. Data structure arrays \var{ELEMS} and \var{NODES}.}
+
+Following the input of geometry for the GMP package, an initial mesh data is generated. The initial mesh generator represents an interface between the GMP package and the \hp3D code, and it does essentially  two things: it generates initial mesh vertex, edge, face and element middle nodes in data structure array \var{NODES}, and it generates initial mesh elements in data structure array \var{ELEMS}, including element-to-nodes connectivities. Both \var{ELEMS} and \var{NODES} are arrays of objects. Array \var{ELEMS} is static, its dimension equals the number of initial mesh elements equal to the number of GMP blocks. Arrays \var{NODES} is dynamic, it will grow during the mesh refinements as new nodes will be generated. The elements arising from mesh refinements are logically identified with their middle nodes. We first generate the initial mesh elements middle nodes so the number of an initial mesh element from \var{ELEMS} coincides with the corresponding middle node number in \var{NODES}.
+
+\paragraph{Natural order of elements.}
+
+A typical loop through the active elements in the mesh is executed by using routine \routine{datstrs/nelcon}:
+
+\begin{lstlisting}[caption=Loop over active mesh elements., label={lst:loop_active_mesh_elements}]
+mdle = 0
+do iel=1,NRELES
+	call nelcon(mdle, mdle)
+	...
+enddo
+\end{lstlisting}
+
+The \routine{nelcon} routine is based on nodal trees restricted to element middle nodes only. See \cite{hpbook,hpbook2} for additional information.
+
+\begin{remark}
+For MPI/OpenMP parallel execution of loops over active mesh elements, the \hp3D \module{data\_structure3D} module builds two arrays, \var{ELEM\_ORDER} and \var{ELEM\_SUBD}, based on \routine{nelcon}. \var{ELEM\_ORDER} is an array of all active mesh elements, and \var{ELEM\_SUBD} is an array of active mesh elements within a subdomain of a distributed mesh. Each one is built (resp.\ updated) by using \routine{nelcon} after each mesh refinement or mesh repartitioning. See Section~\ref{sec:mpi-modules} for additional details.
+\end{remark}
+
+\subsection{Uniform mesh refinements}
+\label{subsec:uniform-refinements}
+
+Isotropic uniform $h$-refinements are easily executed via routine \routine{global\_href}. Anisotropic uniform $h$-refinement routines are also provided for some cases (e.g.~\routine{global\_href\_aniso\_bric}) but should be used carefully since particular anisotropic refinements may not be compatible with a hybrid mesh of different element types (see refinement flags in Section~\ref{sec:adaptivity}). 
+
+Analogously, isotropic uniform $p$-refinements are easily executed via routine \routine{global\_pref}. For the case of $p$-refinements, the user may also execute global unrefinements (i.e.~uniformly lowering the polynomial order of approximation) via routine \routine{global\_punref}.
+
+Adaptive $hp$-refinements are discussed in Section~\ref{sec:adaptivity}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Fundamental Finite Element Algorithms}
+\label{sec:FE_algorithms}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The code supports two fundamental FE algorithms: solution of a boundary-value problem, and an adaptive solution of a boundary-value problem. In the second case, the user must provide an additional routine providing an a-posteriori error estimate. Recall that the DPG method comes with a residual error estimate built-in so no additional work is necessary.
+
+\paragraph{Linear solver.}
+
+The code provides interfaces to several linear solvers. The global stiffness matrix and load vector are either assembled automatically by the solver interface or have to be assembled by the user. In either case, the assembly routine must loop through all {\em active} elements in the mesh and compute the corresponding element matrices. This implementation of the element stiffness matrix and load vector are in the user-provided element routine \routine{elem}. For each active element \var{mdle}, the code calls \routine{elem} from routine \routine{src/constrs/celem\_system.F} which returns the information about the {\em modified element} corresponding to \var{mdle} and the modified element matrices. For a detailed discussion of \routine{celem\_system}, see \cite{hpbook,hpbook2}. In summary, the \routine{celem\_system} routine compiles the information about the modified element nodes, the corresponding number of DOFs, performs partial assembly to account for the constrained nodes, and enforces the Dirichlet BCs by computing the modified load vector and eliminating the Dirichlet DOFs from the system of equations. The solution DOFs returned by the solver are then stored in the data structure arrays.
+
+
+\paragraph{Adaptive solver.}
+
+The simplest adaptive algorithm executes the standard logical sequence:
+\[
+	\text{Solve} \longrightarrow
+	\text{Estimate} \longrightarrow
+	\text{Mark} \longrightarrow
+	\text{Refine} 
+\]
+until a prescribed global error tolerance is met. Error estimation involves a loop through elements and computation of element {\em error indicators} plus a possible additional information aiming at selection of an optimal element refinement. Once the element error indicators are known for all active elements, selected elements are {\em marked} for the preselected $hp$-refinements. Two marking strategies are most popular: {\em the greedy strategy} and the {\em D\"orfler strategy}. In the greedy strategy, we first determine the maximum element error indicator \var{error\_max}, and then mark for refinements all elements whose error indicators exceed a prespecified percentage of \var{error\_max}, i.e.,
+\begin{center}
+	\var{error} $>$ \var{perc} * \var{error\_max}.
+\end{center}
+In D\"orfler's strategy \cite{dorfler1996marking}, the elements are first organized in the order of descending element error indicators, then the total error \var{error\_glob} is computed by summing up the element error indicators, and lastly the first $n$ elements refined from the list that satisfy the criterion:
+
+\[
+\sum_{j=1}^n \var{elem\_error}_j > \var{perc} * \var{error\_glob} .
+\]
+
+The elements selected for refinement are placed on a separate list along with the requested refinement flags.
+
+How to execute $hp$-adaptive refinements is discussed in Section~\ref{sec:adaptivity}.
 
 %\input{Chapters/3_BASICS/comments}
 

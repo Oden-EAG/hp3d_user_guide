@@ -7,37 +7,133 @@
 
 %--------------------------------------------------------------------
 
+This is a preliminary version of the user manual. This chapter on the advanced FE concepts provided by the \hp3D code is currently under development and will be further expanded and completed in a future version of the user manual.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Custom Boundary Conditions}
 \label{sec:advanced-BC}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-In the preceding chapter, it was shown how to set up basic Dirichlet boundary conditions for a variable. In this section, some custom options for setting up various types of boundary conditions are discussed. Note that the \hp3D code allows the user to customize boundary conditions in an almost arbitrary way. A few common boundary conditions types are presented with the goal of introducing the general idea of customizing boundary conditions for an application.
+In the preceding chapter, it was shown how to set up basic Dirichlet boundary conditions for a variable. In this section, some custom options for setting up various types of boundary conditions are discussed. Note that the \hp3D code allows the user to customize boundary conditions in an almost arbitrary way. A few common boundary condition types are presented with the goal of introducing the general idea of customizing boundary conditions for an application.
 
 \subsection{Neumann boundary condition}
 \label{sec:impedance}
+
 \subsection{Impedance boundary condition}
 \label{sec:impedance}
-\subsection{Perfectly matched layer (PML)}
-\label{sec:pml}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Adaptive Refinements}
 \label{sec:adaptivity}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-This section gives an overview of the $hp$-adaptive capabilities of the \hp3D code. Note that the section does \emph{not} discuss the implementation of an error indicator function for guiding the mesh adaptivity, but rather introduces the mechanism of executing the adaptive refinements. It is assumed that some error indicator function, usually problem-dependent, is provided by the user and 
+This section gives an overview of the $hp$-adaptive capabilities of the \hp3D code. Note that the section does \emph{not} discuss the implementation of an error indicator function for guiding mesh adaptivity, but rather introduces the mechanism of executing the adaptive refinements. It is assumed that some error indicator function, usually problem-dependent, is provided by the user.
 
-Starting point is therefore the assumption that an array \var{elem\_ref} of size \var{nr\_elem\_ref} is present, where \var{nr\_elem\_ref} describes the number of elements that have been marked for refinement, and \var{elem\_ref} holds a list of element middle node numbers \code{mdle} of the respective elements.
+Starting point is therefore the assumption that an array \var{elem\_ref(:)} of size \var{nr\_elem\_ref} is present, where \var{nr\_elem\_ref} describes the number of elements that have been marked for refinement, and \var{elem\_ref(:)} holds a list of element middle node numbers \var{mdle} of the respective elements.
 
-\section{Load Balancing}
-\label{sec:load-balancing}
+\paragraph{$h$-adaptivity.}
+In the first example, we show how $h$-adaptive refinements are executed. In essence, each middle node is refined one-by-one by calling the \routine{refine} routine with a corresponding refinement flag \var{kref} encoding the type of $h$-refinement. For middle nodes that can be anisotropically refined, \var{kref} encodes how to refine the corresponding element. Encoding of refinement flags depends upon the element type; for instance,
+\begin{itemize}
+	\item a hexahedral element may be refined in 7 different ways; for example:
+	\begin{itemize}
+		\itemsep 0pt
+		\item \code{\var{kref} = 111} : refine in $x,y,z$
+		\item \code{\var{kref} = 110} : refine in $x,y$
+		\item \code{\var{kref} = 101} : refine in $x,z$
+	\end{itemize}
+	\item a prismatic element may be refined in 3 different ways:
+	\begin{itemize}
+		\itemsep 0pt
+		\item \code{\var{kref} = 11} : refine in $xy,z$
+		\item \code{\var{kref} = 10} : refine in $xy$
+		\item \code{\var{kref} = 01} : refine in $z$
+	\end{itemize}
+\end{itemize}
 
+For hybrid meshes, isotropic refinements can be executed by obtaining isotropic refinement flags for any element type from the routine \routine{get\_isoref} for the respective middle node. After executing $h$-adaptive refinements, it is essential that the user calls the \routine{close\_mesh} routine to preserve 1-irregularity of the mesh.
+
+\begin{lstlisting}[caption=Isotropic $h$-adaptive refinements., label={lst:adaptive_refinement_element_loop4}]
+!..iterate over elements marked for refinement
+   do iel=1,nr_elem_ref
+      mdle = elem_ref(iel)
+!  ...get isotropic h-refinement flag for element type
+      call get_isoref(mdle, kref)
+!  ...h-refine element
+      call refine(mdle,kref)
+   enddo
+!..enforce 1-irregular mesh
+   call close_mesh
+!..update geometry and Dirichlet DOFs
+   call update_gdof
+   call update_Ddof
+\end{lstlisting}
+
+\paragraph{$p$-adaptivity.}
+In the second example, we show how $p$-adaptive refinements are executed. Isotropic $p$-adaptive refinements are carried out easily by the routine \routine{execute\_pref} which must only be provided with the list of elements to be refined in the form of the corresponding middle nodes. After executing adaptive $p$-refinements, the user may want to call one either of the system routines \routine{enforce\_min\_rule} or \routine{enforce\_max\_rule} to apply the minimum or maximum rule, respectively, to handle neighboring elements of different approximation order in a particular way (i.e.~either lowering or raising the order of approximation on the corresponding element interfaces).
+
+\begin{lstlisting}[caption=Isotropic $p$-adaptive refinements., label={lst:adaptive_refinement_element_loop4}]
+!..execute isotropic p-refinements for a list of elements
+   call execute_pref(elem_ref,nr_elem_ref)
+!..enforce minimum rule
+   call enforce_min_rule
+!..update geometry and Dirichlet DOFs
+   call update_gdof
+   call update_Ddof
+\end{lstlisting}
+
+Similar to the $h$-adaptive case where the refinement flag encoded possibly anisotropic refinements, the polynomial order $p$ of element nodes encodes the possibly anisotropic order of approximation. In order to execute anisotropic $p$-adaptive refinements, the user may instead call the routine \routine{perform\_pref}, which additionally must be provided with a list of $p$-refinement flags for middle nodes corresponding to the list of elements to be refined. For each middle node on this list, the $p$-refinement flag encodes the desired order of approximation for the middle node. For example, $p=222$ encodes isotropic quadratic order for the middle node of a hexahedral element, whereas $p=34$ encodes anisotropic mixed order for the middle node of a prism. The routine will then execute corresponding $p$-refinements of edge and face nodes. After finishing $p$-adaptive refinements, the user may again want to enforce the minimum or maximum rule, depending on preference.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Trace Variables}
 \label{sec:traces}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+This section discusses how trace variables can be discretized in \hp3D. This is especially important for discretizations with the DPG method \cite{demkowicz2017dpg}. The \hp3D code offers conforming discretizations for traces of the exact-sequence energy spaces, i.e.~functions belonging to the $H^{1/2}$-, $H^{-1/2}(\tcurl)$-, and $H^{-1/2}$-energy spaces. In \hp3D, these trace unknowns---which are defined on element interfaces---are discretized by using restrictions of $H^1$-, $H(\tcurl)$-, and $H(\tdiv)$-conforming elements to the element boundary. The discretized trace unknowns are thus continuous, tangentially continuous, and normally continuous, respectively. For further reading, we refer to \cite{demkowicz2018spaces,demkowicz2020fem}.
+
+To realize trace variables as restrictions of exact-sequence-conforming elements, the user specifies for each physics attribute whether it is a trace variable via a global flag:
+
+\code{\var{PHYSAi}(i)} $\in \{$\code{.true.,.false.}$\}$, \code{i=1,...,\var{NR\_PHYSA}}.
+
+\noindent
+If enabled, this implies that interactions of bubble (interior) DOFs of an element are not stored in the element matrices for the corresponding traces. In order to compute with trace unknowns, the user \emph{must} enable \hp3D's static condensation module \module{stc} (see Section~\ref{sec:global-variables}). By default, all physics variables are defined as standard variables unless otherwise instructed by the user. The user \emph{may not} for obvious reasons request a trace of an $L^2$-conforming (discontinuous) variable.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Coupled Variables}
 \label{sec:coupled-variables}
-\subsection{Strong coupling}
-\label{sec:strong-coupling}
-\subsection{Weak coupling}
-\label{sec:weak-coupling}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+TODO
+
+\paragraph{Computing with Multiple Physics Variables in $\bs{hp}$3D.}
+
+\begin{itemize}
+	\itemsep 10pt
+	\item Global variables:
+	\begin{itemize}
+		\item \var{NR\_PHYSA}: number of physics attributes (each attribute may have multiple components)
+		\item \var{NRINDEX}: total number of physics attributes components
+	\end{itemize}
+	\item Boundary conditions are set \emph{per component:}
+	\begin{itemize}
+		\item{
+		\var{ELEMS(iel)\%bcond(1:6,1:NRINDEX)} $\in \{$ \code{0,1, ..., 9} $\}$:\\
+		user-defined value indicating for faces of each initial mesh element \var{iel} whether a component is a free component (\code{0}), a Dirichlet component (\code{1}), or has a custom BC (\code{2, ..., 9}).
+		} \item{
+		\var{NODES(nod)\%bcond(1:NRINDEX)} $\in \{$ \code{0,1} $\}$:\\
+		system-generated flag indicating for each node \var{nod} whether a component is a Dirichlet component (\code{1}) or not (\code{0}).
+		}
+	\end{itemize}
+	\item Assembly:
+	\begin{itemize}
+		\item Element-local matrices are assembled in blocks corresponding to \emph{supported} physics attributes
+		\item Element stiffness: \var{ALOC(1:NR\_PHYSA,1:NR\_PHYSA)\%array}
+		\item Element load: \var{BLOC(1:NR\_PHYSA)\%array}
+	\end{itemize}
+\end{itemize}
+
+\paragraph{Solving for a subset of the physics variables.}
+
+Explain \var{PHYSAm(:)}, and \var{Itrial}, \var{Itest}, and how the element matrices \var{ALOC} and \var{BLOC} need to be computed.
 
 %\input{Chapters/4_ADVANCED/comments}
 

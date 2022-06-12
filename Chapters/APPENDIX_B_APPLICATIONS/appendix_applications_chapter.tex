@@ -1,0 +1,54 @@
+%
+%!TEX root = ../../hp3D_user_guide.tex
+%
+
+\chapter{Applications}
+\label{chap:applications}
+
+%--------------------------------------------------------------------
+
+To provide further examples and give the reader an idea of the scope of computations \hp3D is suitable for, this chapter briefly summarizes applications that have been implemented within the current version of the \hp3D finite element code. If an implementation is available in the public repository, we provide a file path for the interested user. References for further reading are provided in all cases.
+
+\section{Optical Fiber Amplifier}
+\label{sec:laser}
+
+Fiber amplifiers are optical waveguides made of silica glass designed for power-scaling highly-coherent laser light. At high optical intensities, undesired nonlinear effects may negatively affect the beam quality. \hp3D has been used to study such nonlinear effects (e.g.~the interplay between the propagating electromagnetic fields and thermal effects) for active gain fiber amplifiers based on a finite element model of the time-harmonic Maxwell equations coupled with the heat equation \cite{henneking2021fiber,nagaraj2018raman}. An implementation of this application is available in the \file{problems/LASER/} directory. 
+
+In addition to the coupled multiphysics formulation, the application employs a high-order discretization and anisotropic adaptive refinements \cite{henneking2021pollution} for a hybrid mesh consisting of both prismatic and hexahedral elements with curvilinear geometry. The application also served as the first real testbed problem for large-scale computation with the MPI/OpenMP parallel \hp3D code, successfully scaling up to thousands of wavelengths and $\sim$1B degrees of freedom \cite{henneking2021phd,henneking2022parallel}. The DPG FE implementation of the Maxwell equations also features fast integration routines via sum factorization for both hexahedral and prismatic elements \cite{mora2019fast,badger2020fast}.
+
+\section{Adaptive Solution of High-Frequency Acoustic and EM Scattering}
+\label{sec:adaptive}
+
+Scattering of high-frequency acoustic (Helmholtz) and electromagnetic (Maxwell) beams. See \cite{petrides2017adaptive,petrides2019phd,petrides2021adaptive} by Socratis Petrides.
+
+This work implemented PML techniques for both Helmholtz and Maxwell problems desribed in \cite{astaneh2018pml}.
+
+\section{Elastic Cylinder}
+\label{sec:hose}
+
+By Brendan Keith.
+
+\section{Nonlinear Elasticity}
+\label{sec:nonlinear-elasticity}
+
+By Jaime D.~Mora.
+
+\section{Thermo-Viscoelasticity}
+\label{sec:visco-elasticity}
+
+Modeling of insulators in high-energy density electric motors (thermo-viscoelasticity) by Federico Fuentes.
+
+\section{Acoustics of the Human Head}
+\label{sec:human-head}
+
+...
+
+\section{EM Coupled with Thermal Effects in the Human Head}
+\label{sec:human-head}
+
+...
+
+
+%\input{Chapters/APPENDIX_B_APPLICATIONS/comments}
+
+

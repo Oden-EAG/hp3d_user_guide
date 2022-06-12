@@ -1,0 +1,393 @@
+%
+%!TEX root = ../../hp3D_user_guide.tex
+%
+
+\chapter{Parallel Computation}
+\label{chap:parallel}
+
+%--------------------------------------------------------------------
+
+This chapter gives a brief introduction to parallel computation with MPI and OpenMP in \hp3D. Further details about parallel algorithms and data structures in \hp3D are given in \cite{hpbook3}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Modules and Variables for Parallel Computation}
+\label{sec:mpi-modules}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This section briefly reviews essential functionality and variables provided in some of \hp3D's parallelization modules that are used internally and can also be leveraged by the user in the problem implementation.
+
+\paragraph{\module{mpi\_wrapper} module.}
+The \module{mpi\_wrapper} module provides two essential routines: \routine{mpi\_w\_init} and \routine{mpi\_w\_finalize}. In every problem implementation, these two routines should be the very first and the very last call, respectively, of the program:
+\begin{lstlisting}[caption=Initiating and finalizing \hp3D's MPI environment., label={lst:mpi_w_init}]
+program main
+   use mpi_wrapper 
+   call mpi_w_init
+!  ... program execution ...
+   call mpi_w_finalize
+end program main
+\end{lstlisting}
+These calls are required for initializing and closing the MPI environment, including hybrid MPI/OpenMP threading, as well as initializing and closing the Zoltan environment used for load balancing (see Section~\ref{sec:load-balancing}). The calls to \routine{mpi\_w\_init} and \routine{mpi\_w\_finalize} should also be made if the program is executed by a single MPI process. 
+
+The user is also encouraged to use the \routine{mpi\_w\_handle\_err(\var{Ierr}, \var{Str})} routine of the \module{mpi\_wrapper} module which prints the error code and a user-defined error string \var{Str} if the return code \var{Ierr} of an MPI function is not equal to \var{MPI\_SUCCESS}. For example:
+\begin{lstlisting}[caption=Checking and printing MPI error codes., label={lst:mpi_w_handle_error}]
+	call MPI_BARRIER (MPI_COMM_WORLD, ierr)
+	call mpi_w_handle_err (ierr, "MPI_BARRIER returned with error code.")
+\end{lstlisting}
+
+\paragraph{\module{mpi\_param} module.} This module stores global parameters and variables related to MPI parallelism. The user may want to make use of the following parameters that are initialized with the MPI environment:
+\begin{itemize}
+	\item \code{integer, save      ::~\var{NUM\_PROCS}} \\
+	Total number of MPI processes. \\
+	Return value of \routine{MPI\_COMM\_SIZE} for the \var{MPI\_COMM\_WORLD} communicator.
+	\item \code{integer, save      ::~\var{RANK}} \\
+	MPI rank of each MPI process. \var{RANK} $\in \{ \code{0}, \code{1}, \dots, \code{\var{NUM\_PROCS}-1} \}$. \\
+	Return value of \routine{MPI\_COMM\_RANK} for the \var{MPI\_COMM\_WORLD} communicator.
+	\item \code{integer, parameter ::~\var{ROOT}  = 0} \\
+	\hp3D defines the MPI process with \code{\var{RANK} 0} as the \emph{root process} (or equivalently, \emph{host process}). Frequently, the root process takes a different execution path from the remaining processes (e.g., in user-interactive computation---see Section~\ref{sec:master-worker-paradigm}, or in I/O operations).
+\end{itemize}
+
+\paragraph{\module{par\_mesh} module.}
+Most of the essential mesh (re-)partitioning functionality in \hp3D is provided by the module \module{src/modules/par\_mesh}. It should be emphasized again that the initial mesh is \emph{not} distributed. In other words, initially, the degrees of freedom are present on all MPI processes, i.e., every MPI process has its own copy of the initial FE mesh. The \module{par\_mesh} module provides a \routine{distr\_mesh} routine that can be called by the user to distribute the mesh at any point, either right after initialization or after some mesh refinements. The \routine{distr\_mesh} routine also serves as a routine for repartitioning (resp.\ load balancing)---see Section~\ref{sec:load-balancing}.
+
+The \module{par\_mesh} module defines two important global variables that keep track of the current state of the mesh in the parallel environment:
+\begin{itemize}
+	\item \code{logical, save ::~\var{DISTRIBUTED} \vspace{-5pt}}
+	\begin{itemize} \itemsep 2pt
+		\item \code{.false.}~if the current mesh is not distributed (all DOFs present on all MPI processes);\\
+		\code{.true.~}~if the current mesh is distributed (DOFs are distributed across MPI processes).
+		\item Once distributed, a mesh cannot be ``undistributed.'' In other words, even if the partitioning is unbalanced (e.g., all DOFs are on one MPI process), the mesh is still distributed in the sense that each mesh element is associated with one particular subdomain (resp.\ MPI process).
+		\item Initially, \code{\var{DISTRIBUTED} = .false.}\\
+		After calling \routine{distr\_mesh}, \code{\var{DISTRIBUTED} = .true.} 
+		\item If using sequential computation (single MPI process), the value of \var{DISTRIBUTED} is irrelevant.
+	\end{itemize}
+	%
+	\item \code{logical, save ::~\var{HOST\_MESH} \vspace{-5pt}}
+	\begin{itemize} \itemsep 2pt
+	\item \code{.true.}~if and only if the \code{ROOT} process has the entire mesh (all DOFs are present on \code{ROOT}).
+	\item Initially, \code{\var{HOST\_MESH} = .true.}\ since all DOFs present on all processes including the \code{ROOT} process. After calling \routine{distr\_mesh}, \code{\var{HOST\_MESH} = .false.} unless \code{\var{NUM\_PROCS} = 1}.
+	\item The DOFs of a distributed mesh can be collected on the host process by calling the \routine{collect\_dofs} routine in \file{src/mpi/par\_aux.F90}. Collecting DOFs on host enables utilities written only for sequential computing (e.g., interactive visualization) and can serve as a debugging tool. After calling \routine{collect\_dofs}, \code{\var{HOST\_MESH} = .true.}
+	\item If using sequential computation (single MPI process), the value of \var{HOST\_MESH} is always \code{.true.}
+	\end{itemize}
+\end{itemize}
+
+As will be discussed in more detail in Section~\ref{sec:leveraging}, the user should be familiar with the meaning of these two variables to leverage parallel computation in \hp3D applications. In particular, using these mesh state variables greatly simplifies writing and executing an \hp3D application that supports both the sequential and distributed-memory setting.
+
+\paragraph{\var{ELEM\_ORDER} and \var{ELEM\_SUBD}.}
+The \module{data\_structure3D} module provides two arrays that are frequently used in the parallel environment. Recall from Section~\ref{sec:data-structure} that iterating over the active mesh elements is commonly done by using the \routine{nelcon} routine that provides a natural ordering of elements (see Listing~\ref{lst:loop_active_mesh_elements}). In the parallel setting, this sequential looping is replaced with a loop over one of two active mesh element arrays: \var{ELEM\_ORDER} and \var{ELEM\_SUBD}. The \var{ELEM\_ORDER} array stores all active mesh elements in their natural order; the \var{ELEM\_SUBD} array stores all active mesh elements within a particular subdomain of a distributed mesh. After each mesh refinement or mesh repartitioning, the two arrays \var{ELEM\_ORDER} and \var{ELEM\_SUBD} are automatically updated by the \routine{update\_ELEM\_ORDER} routine of the \module{data\_structure3D} module:
+
+\begin{lstlisting}[caption=Updating the data structure arrays \var{ELEM\_ORDER} and \var{ELEM\_SUBD}., label={lst:update_elem_order}]
+mdle = 0; NRELES_SUBD = 0
+do iel=1,NRELES
+   call nelcon(mdle, mdle)
+   ELEM_ORDER(iel) = mdle
+   if (NODES(mdle)%subd .eq. RANK) then
+      NRELES_SUBD = NRELES_SUBD + 1
+      ELEM_SUBD(NRELES_SUBD) = mdle
+   endif
+enddo
+\end{lstlisting}
+
+The total number of active mesh elements (size of \var{ELEM\_ORDER}) is denoted by \var{NRELES}, and the number of elements within the subdomain (size of \var{ELEM\_SUBD}) is denoted by \var{NRELES\_SUBD}. The \var{ELEM\_ORDER} and \var{ELEM\_SUBD} arrays are used internally for parallelizing the element loops, and they can be leveraged by the user for the same purpose as demonstrated in Section~\ref{sec:generic-element-loops}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Leveraging Parallelism in Applications}
+\label{sec:leveraging}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This section discusses how MPI and OpenMP parallelism can be leveraged in the user application. As previously discussed in this chapter, most of the functionality that enables parallel computation in \hp3D is hidden from the user. Nonetheless, the user should be to some extent familiar with the parallel environment to be able to implement or modify customizable parallel algorithms within the application.
+
+Before reading this section, it is highly recommended to review the essential modules and data structures enabling parallelism introduced in the preceding section (Section~\ref{sec:mpi-modules}).
+
+\FloatBarrier
+%--------------------------------------------------------------------------------------------%
+\subsection{Generic element loops}
+\label{sec:generic-element-loops}
+
+Looping over mesh elements is one of the most common operations in a finite element code. Usually, these parallelized loops are hidden from the user in \hp3D; for example, the assembly process only requires the user to provide local element matrices which are then modified and assembled to a global linear system by \hp3D's parallelized system routines. However, for any meaningful FE computation, it is essential for the user to understand how a parallel element loop works. For instance, post-processing solution data commonly requires volumetric or boundary integrals over each element. In this type of computation, most of the work is element-local thus can be effectively parallelized. Usually, the parallelized element-local computation is followed by a communication step (e.g., a reduction operator) to calculate aggregate values of interest (e.g., a global residual).
+
+\paragraph{Subdomain element loops.}
+In the distributed setting, the first level of parallelism---MPI distributed-memory computation---is implied by the mesh partitioning. Section~\ref{sec:mpi-modules} introduced the data structures and concepts needed to write a parallel loop over mesh elements within subdomains of the distributed mesh. A typical subdomain element loop can be implemented as follows:
+
+\begin{lstlisting}[caption=Looping over active mesh elements in a subdomain., label={lst:subdomain_element_loop}]
+   integer :: iel, mdle
+   real(8) :: elem_val, subd_val, total_val
+!..if computing sequentially (single MPI process), subdomain is the entire mesh
+   if (.not. DISTRIBUTED) ELEM_SUBD(1:NRELES) = ELEM_ORDER(1:NRELES)
+!..iterate over elements within the subdomain
+   subd_val = 0.d0
+   do iel=1,NRELES_SUBD
+      mdle = ELEM_SUBD(iel)
+!  ...element-local computation
+      elem_val = ...
+!  ...aggregate element values over subdomain
+      subd_val = subd_val + elem_val
+   enddo
+!..aggregate subdomain values globally
+   call MPI_REDUCE(subd_val,total_val,1,MPI_REAL8, &
+                     MPI_SUM,ROOT,MPI_COMM_WORLD, ierr)
+\end{lstlisting}
+
+\paragraph{Parallelizing subdomain element loops.}
+With MPI and OpenMP enabled, the user will typically write a loop over elements within each subdomain using OpenMP threading for parallel element computation within the subdomain. This second level of parallelism---OpenMP shared-memory computation---must be initiated explicitly by opening an OpenMP parallel environment. In this case, element-local variables must be declared as \omp{PRIVATE} variables by the user (i.e., each thread has its own copy of the variable), and subdomain aggregate values are computed by an OpenMP \omp{REDUCTION} clause. In other words, with two levels of parallelization, aggregate values are computed by a two-level reduction operation: first, a reduction across OpenMP threads within the subdomain computation; and second, a reduction across MPI processes for the global aggregate value.
+
+\begin{lstlisting}[caption=Accelerating subdomain element loops by OpenMP threading., label={lst:omp_subdomain_element_loop}]
+!$OMP PARALLEL DO PRIVATE(mdle,elem_val)    &
+!$OMP REDUCTION(+:subd_val)
+   do iel=1,NRELES_SUBD
+      mdle = ELEM_SUBD(iel)
+!  ...element-local computation
+      elem_val = ...
+!  ...aggregate element values over subdomain
+      subd_val = subd_val + elem_val
+   enddo
+!$OMP END PARALLEL DO
+\end{lstlisting}
+
+\paragraph{OpenMP thread scheduling.}
+By default, an OpenMP-parallel loop uses \emph{static thread scheduling}, i.e., each loop iteration (resp.\ element workload) is statically assigned a-priori to a particular OpenMP thread.
+In context of $hp$-adaptively refined meshes with elements of different shape, this default strategy can lead to a severely unbalanced workload between OpenMP threads due to highly variable element workload. In this case, it is preferable to use \emph{dynamic thread scheduling}: by passing the OpenMP clause \omp{SCHEDULE(DYNAMIC)}, each thread is assigned one loop iteration (resp.\ element workload) at a time. Load balancing is thus also done on two levels: the distributed-memory level (a-priori load balancing by mesh repartitioning) and the shared-memory level (dynamic load balancing by OpenMP thread scheduling). While dynamic thread scheduling at runtime eliminates the need for a-priori load balancing work, it comes with a scheduling overhead at loop execution.
+This overhead can be somewhat reduced by assigning a few elements at a time (i.e., using an OpenMP \omp{chunk} size larger than one in the dynamic schedule) or by using a \omp{guided} schedule with variable chunk size. These options reduce scheduling overhead by somewhat compromising on load balance. The optimal choice of OpenMP schedule will depend on a variety of problem-dependent factors. Generally speaking: if the workload is similar for all elements, use either a static schedule or dynamic schedule with large chunk sizes; if the element workload varies much, use a dynamic schedule with small chunk sizes.
+
+\begin{remark}
+As previously mentioned, element loops for matrix assembly and other tasks are part of the system routines and thus hidden from the user application. In \hp3D, these system routines by default employ a dynamic OpenMP thread schedule in all element loops to account for varying element workload in adaptive solutions.
+\end{remark}
+
+\paragraph{An example: adaptive refinements based on element residuals.}
+A typical use-case of performing element-loops is a-posteriori error estimation. An element-local error indicator can be computed independently and in parallel for each element. For instance, in the DPG method the element-local residual serves as a built-in error indicator (see Section~\ref{sec:DPG_method}). The following steps illustrate how parallel MPI/OpenMP computation is used for computing adaptive refinements based on D\"orfler's marking strategy
+(see Section~\ref{sec:FE_algorithms}) using element residuals on a distributed mesh in \hp3D:
+\begin{enumerate}
+\item
+	Compute element residuals within the subdomain:
+	\begin{lstlisting}[caption=Adaptive refinements based on element residuals: (a) subdomain computation., label={lst:adaptive_refinement_element_loop1}]
+   subd_res = 0.d0; elem_res(1:NRELES) = 0.d0
+!$OMP PARALLEL DO PRIVATE(mdle,subd)    &
+!$OMP SCHEDULE(DYNAMIC) REDUCTION(+:subd_res)
+   do iel=1,NRELES
+      mdle = ELEM_ORDER(iel)
+      call get_subd(mdle, subd)
+      if (RANK .ne. subd) cycle
+      call elem_residual(mdle, elem_res(iel))
+      subd_res = subd_res + elem_res(iel)
+   enddo
+!$OMP END PARALLEL DO
+\end{lstlisting}
+\item
+	Communicate residual values by MPI reduction:
+	\begin{lstlisting}[caption=Adaptive refinements based on element residuals: (b) global communication., label={lst:adaptive_refinement_element_loop2}]
+   call MPI_ALLREDUCE(subd_res,total_res,1,MPI_REAL8, &
+                        MPI_SUM,MPI_COMM_WORLD, ierr)
+   call MPI_ALLREDUCE(MPI_IN_PLACE,elem_res,NRELES,MPI_REAL8, &
+                        MPI_SUM,MPI_COMM_WORLD, ierr)
+\end{lstlisting}
+\item
+	Mark elements for adaptive refinement (D\"orfler's strategy):
+	\begin{lstlisting}[caption=Adaptive refinements based on element residuals: (c) element marking., label={lst:adaptive_refinement_element_loop3}]
+!..sort elements by residual values (in descending order)
+   mdle_ref(1:NRELES) = ELEM_ORDER(1:NRELES)
+   call qsort_duplet(mdle_ref,elem_res,NRELES)
+!..mark elements for refinement based on marking strategy
+   alpha = 0.5d0 ! (marking coefficient)
+   nr_elem_ref = 0; sum_res = 0.d0
+   do iel=1,NRELES
+      nr_elem_ref = nr_elem_ref + 1
+      sum_res = sum_res + elem_res(iel)
+      if (sum_res > alpha*total_res) exit
+   enddo
+   \end{lstlisting}
+\item
+	Refine marked elements:
+	\begin{lstlisting}[caption=Adaptive refinements based on element residuals: (d) element refinement., label={lst:adaptive_refinement_element_loop4}]
+!..iterate over elements marked for refinement
+   do iel=1,nr_elem_ref
+      mdle = mdle_ref(iel)
+!  ...get isotropic h-refinement flag for element type
+      call get_isoref(mdle, kref)
+!  ...h-refine element
+      call refine(mdle,kref)
+   enddo
+!..enforce 1-irregular mesh
+   call close_mesh
+!..update geometry and Dirichlet DOFs
+   call update_gdof
+   call update_Ddof
+!..repartition the mesh for load balancing
+   call distr_mesh
+	\end{lstlisting}
+\end{enumerate}
+
+\FloatBarrier
+%--------------------------------------------------------------------------------------------%
+\subsection{Master--worker paradigm}
+\label{sec:master-worker-paradigm}
+
+There are numerous of ways of realizing a parallel driver for \hp3D applications. The user is, of course, free to design the driver of a parallel implementation as needed for the particular application of interest. This section introduces one concept that has been employed successfully within many \hp3D problem implementations. Generally, we distinguish between two different modes of operation (resp.\ program execution):
+
+\begin{itemize}
+	\item Interactive mode: \\
+	A user-interactive job passes only the required arguments for initiating the program (primarily the geometry and physics input files) during the program call. Mesh refinements, adaptive solution process, visualization and I/O are all controlled interactively by the user input. This mode is suitable for sequential (single MPI process) computation or parallel computation with a moderate number of MPI processes executed on a single compute node. Usually, the interactive mode is the primary mode of execution during code development and debugging.
+	\item Production mode: \\
+	A production job passes all of the program arguments needed for execution during the program call. Pre-processing, mesh refinements, adaptive solutions, and post-processing operations are all driven by a pre-defined job script. This mode is suitable for any number of MPI processes and MPI/OpenMP configuration, including large-scale execution on many compute nodes.
+\end{itemize}
+
+As an example, we refer to the driver file \file{main.F90} of the Galerkin Poisson implementation in \file{problems/MPI\_POISSON/GALERKIN/}. In this driver implementation, a program argument ``\code{-job \var{JOB}}'' controls whether the program is executed in the interactive mode (\code{\var{JOB}.eq.0}) or production mode (\code{\var{JOB}.ne.0}). In production mode, the value of \var{JOB} may then define which one of a number of pre-defined job scripts should be executed. 
+
+The remainder of this section is concerned with the implementation of the so-called \emph{master--worker paradigm} for the interactive mode of \hp3D applications in the parallel distributed-memory setting.
+
+\paragraph{Interactive mode in the sequential setting.}
+First, we introduce a typical interactive I/O screen employed by \hp3D's subroutines (e.g., see \file{problems/MPI\_POISSON/GALERKIN/main.F90}):
+
+\begin{lstlisting}[caption=Interactive mode in shared-memory execution., label={lst:interactive_mode_sequential}]
+!..user interface displaying menu in a loop
+   idec = 1
+   do while(idec /= 0)
+!  ...print user options
+      call print_menu
+!  ...read user input
+      read(*,*) idec
+!  ...act on user input
+      select case(idec)
+         case(0) ; exit
+!     ...call a routine handling the user input
+         call default ; exec_case(idec)
+      end select
+   enddo
+\end{lstlisting}
+
+For context, a basic user menu could include the following user options:
+
+\begin{lstlisting}[caption=A basic interactive-mode user menu., label={lst:interactive_mode_menu}]
+ =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ QUIT....................................0
+ 
+         ---- Visualization ----        
+ HP3D graphics (graphb)..................1
+ HP3D graphics (graphg)..................2
+ Paraview................................3
+ 
+         ---- DataStructure ----       
+ Display arrays (interactive)...........10
+ Display DataStructure info.............11
+ 
+          ---- Refinements ----            
+ Single uniform h-refinement............20
+ Single uniform p-refinement............21
+ Refine a single element................22
+ 
+            ---- Solvers ----              
+ MUMPS..................................30
+ Pardiso................................31
+ Frontal................................32
+ PETSc..................................33
+ 
+        ---- Error / Residual ----        
+ Compute exact error....................40
+ Compute residual.......................41
+ =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ \end{lstlisting}
+
+Similar I/O screens are utilized in various system debugging routines the user has access to (e.g., displaying nodal information via the interactive routine \routine{src/datstrs/result}). The mechanism for executing these routines in the distributed-memory setting is similar to the one described in the context of the application driver routine \routine{main} discussed here.
+
+\paragraph{Interactive mode in the parallel setting.}
+As a general rule, the user always interacts with one distinct MPI process at a time. This MPI process---called the \emph{master}---is the \var{ROOT} process. All other MPI ranks are referred to as \emph{worker} processes. In this master--worker paradigm, user inputs are handled by the master process who communicates the input to the worker processes. For that reason, the parallel driver that handles the user interaction is split into two driver routines: \routine{master\_main} and \routine{worker\_main}.
+\begin{lstlisting}[caption=Splitting master and worker execution paths., label={lst:master_worker_main}]
+   if (JOB .ne. 0) then
+!  ...execute production mode
+      call exec_job
+   else
+!  ...execute interactive mode
+      select case(RANK)
+         case(ROOT) ; call master_main
+         case default ; call worker_main
+      end select
+   endif
+\end{lstlisting}
+
+Similar to the sequential case, the \routine{master\_main}---executed only by the master process---displays an interactive user menu and waits for the user input. Once the user input is read, the master broadcasts the user input to the workers. Consequently, the \routine{worker\_main} routine---executed by all worker processes---primarily consists of a receiving broadcast (from \var{ROOT}) followed by executing the user command:
+
+\begin{lstlisting}[caption=Interactive mode in distributed-memory execution., label={lst:interactive_mode_parallel}]
+  idec=1
+  do while(idec /= 0)
+!  ...waiting for the master to broadcast user input
+      call MPI_BCAST(idec,1,MPI_INTEGER,ROOT,MPI_COMM_WORLD, ierr)
+!  ...act on user input
+      select case(idec)
+         case(0) ; exit
+!     ...call a routine handling the user input
+         call default ; exec_case(idec)
+      end select
+   enddo
+\end{lstlisting}
+
+In essence, this summarizes how interactive user inputs are typically handled in parallel \hp3D applications. The master--worker paradigm can, in principle, be executed for an arbitrary number of processes. Primarily, though, the interactive mode serves the user to check intermediate results of the computation interactively during code development and debugging.
+
+\begin{remark}
+In some circumstances, the user may want to interact directly with one of the worker processes. For instance, when the user wants to display information that the master process does not have access to, such as geometry degrees of freedom outside of its subdomain. In this case, the master can prompt a user input for choosing a particular worker rank to interact with rather than relaying all user commands to the worker by MPI communication.
+\end{remark}
+
+\begin{lstlisting}[caption=Initiating an interactive worker routine by a master broadcast., label={lst:interactive_mode_worker}]
+!..ask the user which MPI process should display information
+   if (RANK .eq. ROOT)
+      write(*,*) 'Select processor RANK: '; read(*,*) r
+   endif
+   call MPI_BCAST(r,1,MPI_INTEGER,ROOT,MPI_COMM_WORLD, ierr)
+!..open interactive data structure routine from worker process with rank r
+   if (r .eq. RANK) call result
+!..wait for the interactive worker routine to finish
+   call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+\end{lstlisting}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Load Balancing}
+\label{sec:load-balancing}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\paragraph{Adaptive Solution with Dynamic Load Balancing}
+
+Adaptive solution process:\\
+\begin{enumerate}
+	\itemsep -15pt
+	\item Initialize mesh (not distributed) \\
+	\item (Re-)distribute the mesh (\routine{distr\_mesh} routine from \module{par\_mesh} module) \\
+	\item Solve \\
+	\item Estimate the error (end if solution is sufficiently accurate) \\
+	\item Mark elements for refinement \\
+	\item Refine the mesh ($hp$) \\
+	\item Optionally, repartition the mesh for load balancing purposes (continue with Step 2); otherwise, continue with Step 3.
+\end{enumerate}
+
+In Step 6 (refinement), subdomain inheritance when breaking nodes, i.e.~the subdomain value \var{subd} of a newly created node ($h$-refinement) is inherited from the father node. This may lead to \emph{load imbalance}. The \hp3D interface to Zoltan is provided in the module \module{zoltan\_wrapper}. This module includes several of the above mentioned functionalities to the user: for example, \routine{zoltan\_w\_eval} evaluates the quality of the current mesh, and \routine{zoltan\_w\_set\_lb(\var{LB})} sets an internal parameter (\var{ZOLTAN\_LB}) determining the load balancing strategy. The mesh repartitioning begins with a call to the routine \routine{zoltan\_w\_partition(\var{Mdle\_subd})} that returns, for each active element (i.e., active middle node) in the mesh, the newly assigned subdomain for the repartitioned mesh. Having determined a new partition for the mesh, the data migration step follows. This functionality is implemented in the \routine{distr\_mesh} routine of the module \module{par\_mesh}. 
+
+\module{zoltan\_wrapper} module:
+\begin{itemize}
+	\item \routine{zoltan\_w\_eval}
+	\begin{itemize}
+		\item Evaluates the quality of the current mesh partitioning.
+	\end{itemize}
+	\item \routine{zoltan\_w\_set\_lb(\var{LB})}
+	\begin{itemize}
+		\item Sets global variable \var{ZOLTAN\_LB} to define partitioning algorithm.
+		\item \var{ZOLTAN\_LB} $\in \{$BLOCK, RANDOM, RCB, RIB, HSFC, GRAPH, FIBER$\}$.
+	\end{itemize}
+	\item \routine{zoltan\_w\_partition(\var{Mdle\_subd(1:NRELES)})}
+	\begin{itemize}
+		\item Returns new partitioning (subdomain number for each middle node) for the active mesh.
+	\end{itemize}
+\end{itemize}
+
+
+\underline{Data migration:} If element ownership has changed to a new subdomain, then the old owner and new owner of the element may exchange DOF data for each element node if requested by the user setting \code{\var{EXCHANGE\_DOF} = .true.}:
+\begin{itemize}
+	\item For each element node, the old owner\\
+	1) packs nodal data, i.e., $H^1$-, $H(\tcurl)$-, $H(\tdiv)$-, and $L^2$-DOFs, into a buffer array;\\
+	2) sends nodal data to the new owner (point-to-point communication).
+	\item For each element node, the new owner\\
+	1) allocates nodal DOFs;\\
+	2) receives nodal data from the old owner (point-to-point communication);\\
+	3) unpacks nodal data from buffer array into $H^1$-, $H(\tcurl)$-, $H(\tdiv)$-, and $L^2$-DOFs.
+\end{itemize}
+
+
+%\input{Chapters/5_PARALLEL/comments}
+
+

@@ -6,6 +6,7 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{amsfonts}
+\usepackage{authblk}
 \usepackage{array}
 \newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}p{#1}}
 \newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}p{#1}}
@@ -32,9 +33,15 @@
 
 \usepackage{verbatim} % verbatim environment ignores LaTeX commands
 
+% avoid forcing pagebreak at new chapter
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd{\chapter}{\if@openright\cleardoublepage\else\clearpage\fi}{}{}{}
+\makeatother
+
 %=====================================================%
 % Main bib files
-\usepackage[backend=bibtex]{biblatex}
+\usepackage[backend=bibtex,giveninits=true]{biblatex}
 \addbibresource{References/journals-iso4.bib}
 \addbibresource{References/ref_stefan.bib}
 %=====================================================%
@@ -75,6 +82,7 @@
 \lstset{numberstyle=\tiny\color{codegray}}
 \lstset{stringstyle=\color{codepurple}}
 \lstset{morecomment=[l][\color{TEAL}]{!$OMP}}
+\lstset{showstringspaces=false}
 
 %=====================================================%
 
