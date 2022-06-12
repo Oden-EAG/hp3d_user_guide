@@ -98,7 +98,6 @@ This section discusses how MPI and OpenMP parallelism can be leveraged in the us
 
 Before reading this section, it is highly recommended to review the essential modules and data structures enabling parallelism introduced in the preceding section (Section~\ref{sec:mpi-modules}).
 
-\FloatBarrier
 %--------------------------------------------------------------------------------------------%
 \subsection{Generic element loops}
 \label{sec:generic-element-loops}
@@ -152,8 +151,11 @@ This overhead can be somewhat reduced by assigning a few elements at a time (i.e
 As previously mentioned, element loops for matrix assembly and other tasks are part of the system routines and thus hidden from the user application. In \hp3D, these system routines by default employ a dynamic OpenMP thread schedule in all element loops to account for varying element workload in adaptive solutions.
 \end{remark}
 
-\paragraph{An example: adaptive refinements based on element residuals.}
-A typical use-case of performing element-loops is a-posteriori error estimation. An element-local error indicator can be computed independently and in parallel for each element. For instance, in the DPG method the element-local residual serves as a built-in error indicator (see Section~\ref{sec:DPG_method}). The following steps illustrate how parallel MPI/OpenMP computation is used for computing adaptive refinements based on D\"orfler's marking strategy
+%--------------------------------------------------------------------------------------------%
+\subsection{Adaptive solution with a distributed mesh}
+\label{sec:parallel-adaptivity}
+
+A typical use-case of performing element-loops is a-posteriori error estimation. An element-local error indicator can be computed independently and in parallel for each element. For instance, in the DPG method the element-local residual serves as a built-in error indicator \cite{demkowicz2017dpg}. The following steps illustrate how parallel MPI/OpenMP computation is used for computing adaptive refinements based on D\"orfler's marking strategy
 (see Section~\ref{sec:FE_algorithms}) using element residuals on a distributed mesh in \hp3D:
 \begin{enumerate}
 \item

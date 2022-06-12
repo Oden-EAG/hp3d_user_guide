@@ -16,16 +16,57 @@ This is a preliminary version of the user manual. This chapter on the advanced F
 
 In the preceding chapter, it was shown how to set up basic Dirichlet boundary conditions for a variable. In this section, some custom options for setting up various types of boundary conditions are discussed. Note that the \hp3D code allows the user to customize boundary conditions in an almost arbitrary way. A few common boundary condition types are presented with the goal of introducing the general idea of customizing boundary conditions for an application.
 
+In the user-defined \routine{set\_initial\_mesh} routine, boundary conditions are set \emph{per component:}
+\begin{itemize}
+	\item{
+	\var{ELEMS(iel)\%bcond(1:6,1:NRINDEX)} $\in \{$ \code{0,1, ..., 9} $\}$:\\
+	user-defined value indicating for faces of each initial mesh element \var{iel} whether a component is a free component (\code{0}), a Dirichlet component (\code{1}), or has a custom BC (\code{2, ..., 9}).
+	} \item{
+	\var{NODES(nod)\%bcond(1:NRINDEX)} $\in \{$ \code{0,1} $\}$:\\
+	system-generated flag indicating for each node \var{nod} whether a component is a Dirichlet component (\code{1}) or not (\code{0}).
+	}
+\end{itemize}
+
 \subsection{Neumann boundary condition}
 \label{sec:impedance}
+
+Examples of Neumann BC will be included in a future version of the user manual.
 
 \subsection{Impedance boundary condition}
 \label{sec:impedance}
 
+Examples of Impedance BC will be included in a future version of the user manual.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Adaptive Refinements}
+\section{Adaptivity}
 \label{sec:adaptivity}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The sophisticated $hp$-adaptive capabilities are one of the main selling points of the \hp3D finite element code. This section describes the basics of an adaptive solution procedure and how the user can execute $hp$-adaptive mesh refinements in the application code.
+
+\subsection{Adaptive solver}
+
+The simplest adaptive algorithm executes the standard logical sequence:
+\[
+	\text{Solve} \longrightarrow
+	\text{Estimate} \longrightarrow
+	\text{Mark} \longrightarrow
+	\text{Refine} 
+\]
+until a prescribed global error tolerance is met. Error estimation involves a loop through elements and computation of element {\em error indicators} plus possible additional information aiming at selection of an optimal element refinement. Once the element error indicators are known for all active elements, selected elements are {\em marked} for the pre-selected $hp$-refinements. Two marking strategies are most popular: {\em the greedy strategy} and the {\em D\"orfler strategy}. In the greedy strategy, we first determine the maximum element error indicator \var{error\_max}, and then mark for refinements all elements whose error indicators exceed a certain percentage of \var{error\_max}, i.e.,
+\begin{center}
+	\var{error} $>$ \var{perc} * \var{error\_max}.
+\end{center}
+In D\"orfler's strategy \cite{dorfler1996marking}, the elements are first organized in the order of descending element error indicators, then the total error \var{error\_glob} is computed by summing up the element error indicators, and lastly the first $n$ elements refined from the list that satisfy the criterion:
+
+\[
+\sum_{j=1}^n \var{elem\_error}_j > \var{perc} * \var{error\_glob} .
+\]
+
+The elements selected for refinement are placed on a separate list along with the requested refinement flags.
+
+\subsection{Adaptive refinements}
+\label{sec:adaptive-refinements}
 
 This section gives an overview of the $hp$-adaptive capabilities of the \hp3D code. Note that the section does \emph{not} discuss the implementation of an error indicator function for guiding mesh adaptivity, but rather introduces the mechanism of executing the adaptive refinements. It is assumed that some error indicator function, usually problem-dependent, is provided by the user.
 
@@ -88,7 +129,7 @@ Similar to the $h$-adaptive case where the refinement flag encoded possibly anis
 \label{sec:traces}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-This section discusses how trace variables can be discretized in \hp3D. This is especially important for discretizations with the DPG method \cite{demkowicz2017dpg}. The \hp3D code offers conforming discretizations for traces of the exact-sequence energy spaces, i.e.~functions belonging to the $H^{1/2}$-, $H^{-1/2}(\tcurl)$-, and $H^{-1/2}$-energy spaces. In \hp3D, these trace unknowns---which are defined on element interfaces---are discretized by using restrictions of $H^1$-, $H(\tcurl)$-, and $H(\tdiv)$-conforming elements to the element boundary. The discretized trace unknowns are thus continuous, tangentially continuous, and normally continuous, respectively. For further reading, we refer to \cite{demkowicz2018spaces,demkowicz2020fem}.
+This section discusses how trace variables can be discretized in \hp3D. This feature is especially important for discretizations with the DPG method \cite{demkowicz2017dpg}. The \hp3D code offers conforming discretizations for traces of the exact-sequence energy spaces, i.e.~functions belonging to the $H^{1/2}$-, $H^{-1/2}(\tcurl)$-, and $H^{-1/2}$-energy spaces. In \hp3D, these trace unknowns---which are defined on element interfaces---are discretized by using restrictions of $H^1$-, $H(\tcurl)$-, and $H(\tdiv)$-conforming elements to the element boundary. The discretized trace unknowns are thus continuous, tangentially continuous, and normally continuous, respectively. For further reading, we refer to \cite{demkowicz2018spaces,demkowicz2020fem}.
 
 To realize trace variables as restrictions of exact-sequence-conforming elements, the user specifies for each physics attribute whether it is a trace variable via a global flag:
 
@@ -102,38 +143,72 @@ If enabled, this implies that interactions of bubble (interior) DOFs of an eleme
 \label{sec:coupled-variables}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-TODO
+In \hp3D, problems with coupled variables may be defined in a way where the coupling happens over the entire domain, over part of the domain, or at an interface between different parts of the domain. In this section, we only focus on problems with variables supported in the entire mesh.
 
-\paragraph{Computing with Multiple Physics Variables in $\bs{hp}$3D.}
+\paragraph{Computing with multiple physics variables.}
 
+Solving multiphysics problems in \hp3D requires an understanding of how \hp3D internally stores and computes interactions between multiple variables.
+First, recall the following essential information from previous sections:
 \begin{itemize}
-	\itemsep 10pt
-	\item Global variables:
-	\begin{itemize}
-		\item \var{NR\_PHYSA}: number of physics attributes (each attribute may have multiple components)
-		\item \var{NRINDEX}: total number of physics attributes components
-	\end{itemize}
-	\item Boundary conditions are set \emph{per component:}
-	\begin{itemize}
-		\item{
-		\var{ELEMS(iel)\%bcond(1:6,1:NRINDEX)} $\in \{$ \code{0,1, ..., 9} $\}$:\\
-		user-defined value indicating for faces of each initial mesh element \var{iel} whether a component is a free component (\code{0}), a Dirichlet component (\code{1}), or has a custom BC (\code{2, ..., 9}).
-		} \item{
-		\var{NODES(nod)\%bcond(1:NRINDEX)} $\in \{$ \code{0,1} $\}$:\\
-		system-generated flag indicating for each node \var{nod} whether a component is a Dirichlet component (\code{1}) or not (\code{0}).
-		}
-	\end{itemize}
-	\item Assembly:
-	\begin{itemize}
-		\item Element-local matrices are assembled in blocks corresponding to \emph{supported} physics attributes
-		\item Element stiffness: \var{ALOC(1:NR\_PHYSA,1:NR\_PHYSA)\%array}
-		\item Element load: \var{BLOC(1:NR\_PHYSA)\%array}
-	\end{itemize}
+	\item Global variables \var{NR\_PHYSA}, \var{NR\_COMP(:)}, and \var{NRINDEX} store the total number of physics attributes, the number of components per physics attribute, and the total number of components, respectively.
+	\item In the \routine{set\_initial\_mesh} routine, boundary conditions are set separately for each component.
+	\item In the \routine{elem} routine, element-local matrices are assembled in blocks corresponding to (supported) physics attributes:\\ 
+	\var{ALOC(1:NR\_PHYSA,1:NR\_PHYSA)\%array(:,:)} (element stiffness); and \\
+	\var{BLOC(1:NR\_PHYSA)\%array(:,:)} (element load).\\
+	Note that the load ``vector'' may have multiple columns if solving a problem for multiple right-hand sides.
 \end{itemize}
+
+Physics variables are always defined and stored (in \module{physics}) in the order of the exact sequence. For each approximation space, the user may define multiple physics attributes (in the \file{physics} input file), and each attribute may have one or multiple components (also defined in the \file{physics} input file).
+
+The \routine{elem} routine that assembles each of the stiffness and load blocks must provide the system assembly routines with information about which blocks have been locally computed. This is necessary for two reasons:
+\begin{enumerate}
+	\item An element may not support all physics variables thus will only assemble a subset of the blocks corresponding to the supported attributes.
+	\item A linear system for only a subset of the supported variables is assembled and solved.
+\end{enumerate}
+In order to provide this information to the system routines, \routine{elem} returns a flag for each of the blocks indicating whether it was computed by the element. The following arguments are defined in the \routine{elem} routine:
+\begin{itemize}
+	\itemsep 0pt
+	\item{ \code{integer, intent(in) :: \var{Mdle}} \\
+		\var{Mdle} is the unique middle node number associated with the element.
+	}
+	\item{ \code{integer, intent(out) :: \var{Itest}(\var{NR\_PHYSA})} \\
+		For the $i$-th test function (corresponding to the $i$-th physics attribute), \code{\var{Itest}(i) = 1} indicates that the $i$-th block (row) of \var{ALOC} and \var{BLOC} corresponds to an active and supported variable.
+	}
+	\item{ \code{integer, intent(out) :: \var{Itrial}(\var{NR\_PHYSA})} \\
+		For the $i$-th trial function (corresponding to the $j$-th physics attribute), \code{\var{Itrial}(j) = 1} indicates that the $j$-th block (column) of \var{ALOC} corresponds to an active and supported variable.
+	}
+\end{itemize}
+
+The $(i,j)$-th block of \var{ALOC} is provided by the \routine{elem} routine if and only if \code{\var{Itest}(i) = 1} \emph{and} \code{\var{Itrial}(j) = 1}, and the $i$-th block of \var{BLOC} is provided if and only if \code{\var{Itest}(i) = 1}. Usually, when the $(i,j)$-th stiffness block is computed, then the $(j,i)$-th block is also provided.
 
 \paragraph{Solving for a subset of the physics variables.}
 
-Explain \var{PHYSAm(:)}, and \var{Itrial}, \var{Itest}, and how the element matrices \var{ALOC} and \var{BLOC} need to be computed.
+In a problem where the user would like to compute a subset of the variables at a time (e.g.~staggered solve in simple fixed-point iteration), this can easily be done by toggling the global flags \var{PHYSAm(:)} of the \module{physics} module. For the $i$-th physics attribute (\code{i = 1,\ldots,\var{NR\_PHYSA}}), \code{\var{PHYSAm}(i)=.false.} deactivates the corresponding physics attribute. If all physics variables are otherwise supported on the entire mesh, then the \routine{elem} routine can very easily set the assembly flags \var{Itest} and \var{Itrial} as follows:
+
+\begin{lstlisting}[caption=Solving for a subset of variables in \routine{elem}.]
+!  in:   Mdle     - element middle node number
+!  out:  Itest    - index for assembly
+!        Itrial   - index for assembly
+subroutine elem(Mdle, Itest,Itrial)
+   integer, intent(in)    :: Mdle
+   integer, intent(out) :: Itest(NR_PHYSA)
+   integer, intent(out) :: Itrial(NR_PHYSA)
+!  .......
+   Itest(1:NR_PHYSA) = 0; Itrial(1:NR_PHYSA) = 0
+!
+!..all variables are supported on all elements,
+!  thus assemble for all of the currently enabled variables
+   do i = 1,NR_PHYSA
+      if (PHYSAm(i)) then
+         Itest(i) = 1; Itrial(i) = 1
+      endif
+   enddo
+!  ...... compute the corresponding blocks of ALOC and BLOC
+\end{lstlisting}
+
+\begin{remark}
+More information about partial support of variables (defined in parts of the domain) will be included in a future version of the user manual.
+\end{remark}
 
 %\input{Chapters/4_ADVANCED/comments}
 

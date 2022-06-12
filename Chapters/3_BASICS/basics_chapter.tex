@@ -7,69 +7,166 @@
 
 %--------------------------------------------------------------------
 
+This chapter discusses some of the basic concepts in \hp3D which the user should be familiar with, as well as how to set up the application-specific files and routines that need to be provided by the user.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{A Simple Example}
+\section{Important Global Variables}
+\label{sec:global-variables}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The \hp3D code defines several important global variables, some of which are system-generated and may be used within the application code, and others which are user-defined and instruct the library code.
+
+\subsection{System-generated variables}
+
+Several system modules (e.g.~\module{physics}) provide useful variables to the library and the user. We show some examples of these modules and their variables and encourage the user to take a look at the modules to learn about additional variables that may be of interest. Unless otherwise mentioned, the modules are located in \file{trunk/src/modules/}.
+
+\begin{itemize}
+	\item
+	{
+		\code{module} \module{physics}: 
+		\begin{itemize}
+			\item{ \var{NR\_PHYSA}:\\
+			This global integer variable defines the total number of physics variables (or physics attributes) that have been requested by the user and are stored in the data structure. Note that each physics attribute may have multiple components. Moreover, a physics attribute may only be partially supported (i.e.~defined over a part of the mesh).
+			} \item{ \var{NR\_COMP}\code{(i), i=1,...,\var{NR\_PHYSA}}:\\
+			This global integer array defines, for each physics variable, how many components have been requested by the user. Depending on the energy space, a component may be scalar-valued ($H^1$, $L^2$) or vector-valued ($H(\tcurl)$, $H(\tdiv)$).
+			} \item{ \var{NRINDEX}:\\
+			This global integer defines the total number of components that have been requested by the user. That is, it is the sum of the entries in the global array \var{NR\_COMP(:)}.
+		}
+		\end{itemize}
+	}
+	\item
+	{
+		\code{module} \module{assembly}:
+		\begin{itemize}
+			\item{ \code{\var{ALOC}(i,j), \var{BLOC}(i), i,j = 1,...,\var{NR\_PHYSA}}: \\
+			These two variables are provided to the user for computing local element matrices, i.e.~the user must store the element stiffness matrix in \var{ALOC} and the element load vector in \var{BLOC}. Both \var{ALOC} and \var{BLOC} are ``super-arrays'' with submatrices (blocks) defined for interactions of each physics attribute. For example, \code{\var{ALOC}(i,j)\%nrow} defines the number of rows of the $(i,j)$-th block of the stiffness matrix and \code{\var{ALOC}(i,j)\%array(:,:)} has the corresponding real-valued or complex-valued entries. The concept will become clear when looking at model problem implementations (\routine{elem} routine) with multiple physics variables. See also Section~\ref{sec:coupled-variables} on computing with coupled variables.
+			}
+		\end{itemize}
+	} 
+	\item
+	{
+		\code{module} \module{data\_structure3D}:
+		\begin{itemize}
+			\item {\var{NRELIS}, \var{NRELES}:\\
+			The \module{data\_structure3D} module stores variables and arrays related to the mesh data structure (see Section~\ref{sec:data-structure}). \var{NRELIS} is the number of initial mesh elements (does not change during computation), and \var{NRELES} is the number of active mesh elements (increases with each mesh refinement).
+			}
+		\end{itemize}
+	}
+\end{itemize}
+
+\subsection{User-defined variables}
+
+These global variables, set directly by the user, affect the library behavior. For example, the static condensation module \module{stc}, which implements static condensation routines for local element matrices and is used by the system routine \routine{celem\_systemI} during assembly, lets the user define three variables.
+
+\begin{itemize}
+	\item
+	{
+		\code{module} \module{stc}:
+		\begin{itemize}
+			\item {\var{ISTC\_FLAG} $\in \{$\code{.true.,.false.}$\}$: \\
+				Enables/disables static condensation of bubble DOFs in element matrices.}
+			\item {\var{STORE\_STC} $\in \{$\code{.true.,.false.}$\}$: \\
+				Enables/disables storing Schur complement factors (recomputed otherwise).}
+			\item {\var{HERM\_STC} $\in \{$\code{.true.,.false.}$\}$: \\
+				Enables/disables optimized linear algebra routines for Hermitian matrices.}
+		\end{itemize}
+	}
+	\item
+	{
+		\code{module} \module{parameters}: 
+		\begin{itemize}
+			\item {\var{MAXP} $\in \{$\code{1,2, ..., 9}$\}$:\\
+			Defines the maximum polynomial order of approximation allowed to be used anywhere in the mesh. This parameter is used internally for preallocating data structures and \emph{must} be changed before compiling the \hp3D library. The maximum order currently supported is \code{\var{MAXP}=9}. The user is advised to compile the library with a lower value of \var{MAXP}, depending on the maximum anticipated order used in computation, for more efficient low-order computation.
+			}
+			\item {\var{NRCOMS} $\in \{$\code{1,2, ...}$\}$:\\
+			Number of copies of each variable stored in the data structure, e.g.~multiple copies may be needed when computing time-stepping solutions. This parameter may be set at runtime before mesh initialization by calling the \routine{set\_parameters} routine.
+			}
+		\end{itemize}
+	}
+	\item
+	{
+		\code{module} \module{paraview}: 
+		\begin{itemize}
+			\item {\var{VLEVEL} $\in \{$\code{0,1,2,3,4}$\}$:\\
+			Determines how refined the mesh output is when exporting geometry and solution data to ParaView/vtk. If \code{\var{VLEVEL}=0}, the mesh is outputted ``as is'' with the geometry and solution linearly interpolated for the ParaView plot. Each ``upscaling'' of \var{VLEVEL} increases the resolution by one refinement level.
+			}
+		\end{itemize}
+	}
+	\item
+	{
+		\code{module} \module{physics}:
+		\begin{itemize}
+			\item{ \code{\var{PHYSAd}(i)} $\in \{$\code{.true.,.false.}$\},$ \code{i=1,...,\var{NR\_PHYSA}}:\\
+			Used for indicating a \emph{homogeneous} Dirichlet BC for any components of the variable defined as a Dirichlet component. For such components, the computation is then more efficient because no Dirichlet data needs to be interpolated.
+			}
+			\item{ \code{\var{PHYSAi}(i)} $\in \{$\code{.true.,.false.}$\},$ \code{i=1,...,\var{NR\_PHYSA}}:\\ 
+			Used for computing with traces (see Section~\ref{sec:traces}).
+			}
+			\item{ \code{\var{PHYSAm}(i)} $\in \{$\code{.true.,.false.}$\},$ \code{i=1,...,\var{NR\_PHYSA}}:\\ 
+			Used for enabling/disabling physics attributes (see Section~\ref{sec:coupled-variables}).
+			}
+		\end{itemize}
+	}
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Application-Specific Input Files and Routines}
 \label{sec:simple-example}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\hp3D's library is set up to read certain user-defined inputs when initializing the program (e.g.~initial geometry file) and call certain user-defined routines (e.g.~providing element-local matrices). This section briefly reviews the input files and routines that the user must provide.
+
+In general, when beginning a new application implementation, it is advisable to start off by copying an existing model implementation and then modify the required routines. Applications should be coded within the subdirectory \file{trunk/problems/}. Examples of specific model problem implementations are given in Appendix~\ref{chap:examples}.
+
 \subsection{Input files}
 
+Each of the three required input files---\file{control}, \file{physics}, and \file{geometry}---must be provided with a certain formatting and define a number of required parameters. For additional details and examples of the input formatting, we refer to the model problems.
+
 \begin{itemize}
-	\item \file{physics}
-	\item \file{geometry}
+	\item{ 
+		\file{control}\\
+		Sets global variables in \code{module} \module{control}. The user must provide the (relative) path to this file to the \var{FILE\_CONTROL} variable in \code{module} \module{environment} before mesh initialization.
+	}\item{
+		\file{physics}\\
+		Sets global variables in \code{module} \module{physics}. The user must provide the (relative) path to this file to the \var{FILE\_PHYS} variable in \code{module} \module{environment} before mesh initialization.
+	}\item{
+		\file{geometry}\\
+		Defines the initial geometry mesh. The user must provide the (relative) path to this file to the \var{FILE\_GEOM} variable in \code{module} \module{environment} before mesh initialization.
+	}
 \end{itemize}
 
 \subsection{Driver and required routines}
 
 \begin{itemize}
-	\item \routine{main}
-	\item \routine{set\_initial\_mesh}
-	\item \routine{dirichlet}
-\end{itemize}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Important global variables}
-\label{sec:global-variables}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-The user should be familiar with some of \hp3D's global variables, some of which are system-generated and may be used within the application code, and others which are user-defined and instruct the library code.
-
-\paragraph{System-generated variables.}
-
-For example, \var{NR\_PHYSA}, \var{NRINDEX}.
-
-\paragraph{User-defined variables.}
-
-For example, static condensation module \module{stc}, which implements static condensation routines for local element matrices and is used by the system routine \routine{celem\_systemI} during assembly, lets the user define three variables:
-
-\begin{itemize}
-	\item {\var{ISTC\_FLAG} $\in \{$\code{.true.,.false.}$\}$\\
-		Enables/disables static condensation of bubble DOFs in element matrices.}
-	\item {\var{STORE\_STC} $\in \{$\code{.true.,.false.}$\}$\\
-		Enables/disables storing Schur complement factors (recomputed otherwise).}
-	\item {\var{HERM\_STC} $\in \{$\code{.true.,.false.}$\}$\\
-		Enables/disables optimized linear algebra routines for Hermitian matrices.}
-\end{itemize}
-
-Flags concerning physics attributes:
-\begin{itemize}
-	\item
-	{\code{\var{PHYSAd}(i)} $\in \{$\code{.true.,.false.}$\},$ \code{i=1,...,\var{NR\_PHYSA}}:\\ 
-	used for indicating a homogeneous Dirichlet BC.}
-	\item
-	{\code{\var{PHYSAi}(i)} $\in \{$\code{.true.,.false.}$\},$ \code{i=1,...,\var{NR\_PHYSA}}:\\ 
-	used for computing with traces (see Section~\ref{sec:traces}).}
-	\item 
-	{\code{\var{PHYSAm}(i)} $\in \{$\code{.true.,.false.}$\},$ \code{i=1,...,\var{NR\_PHYSA}}:\\ 
-	used for enabling/disabling physics attributes (see Section~\ref{sec:coupled-variables}).}
+	\item{
+		\code{program} \routine{main}: \\
+		The \routine{main} program is the ``driver'' of the application. It should set environment variables, initialize the mesh data structure, and interact with the user (or execute a pre-defined job). The initialization of an application includes calling various library routines, such as \routine{read\_control}, \routine{read\_input}, \routine{read\_geometry}, and \routine{hp3gen}.
+	}
+	\item{
+		\code{subroutine} \routine{set\_initial\_mesh(\var{Nelem\_order})}: \\
+		The initialization routine \routine{hp3gen} sets up the mesh data structures (see next section). During this initialization, a user-provided routine \routine{set\_initial\_mesh} is called which defines the supported physics variables and initial order of approximation for each element (stored in \var{Nelem\_order(:)}), as well as the boundary condition flags for physics components on element faces.
+	}
+	\item{
+		\code{subroutine} \routine{dirichlet}: \\
+		If the user has specified non-homogeneous Dirichlet flags for any component on the boundary, then the user-provided \routine{dirichlet} routine is required. The routine is called from the system routine \routine{update\_Ddof} which computes the Dirichlet data via projection-based interpolation. \routine{dirichlet} takes a physical coordinate input $x$ and must return the value and first derivatives of the expected $H^1$, $H(\tcurl)$, and/or $H(\tdiv)$ boundary data at coordinate $x$.
+	}
+	\item{
+		\code{subroutine} \routine{elem}: \\
+		The \routine{elem} routine is at the heart of the application code---it implements the variational formulation on the element level. This routine is called by system routines during the finite element assembly and provides the element-local stiffness matrix and load vector for each element in the active mesh.
+	}
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Mesh Data Structure}
 \label{sec:data-structure}
 
+Due to the support for hybrid meshes and adaptive refinements, the \hp3D mesh data structure is dynamically build as refinements are executed. Before the main data structure arrays (\var{ELEMS} and \var{NODES}) are discussed, we review how element data is stored and accessed for elements of different shapes.
+
+\subsection{Element data}
+\label{sec:element-data}
+
 \paragraph{Module \module{element\_data}.}
-The code supports four types of elements: hexahedra (bricks), tetrahedra (tets), prisms, and pyramids. Any element computations are done in an object programming fashion using general element utilities provided in \module{modules/element\_data}. For instance, a simple loop through element vertices is executed by
+The \hp3D code supports four types of elements: hexahedra, tetrahedra, prisms, and pyramids. Any element computations are executed in an object-oriented programming fashion using general element utilities provided in \file{src/modules/}\module{element\_data}. For instance, a simple loop through element vertices is executed by
 
 % Use lstlisting environment for code snippets
 \begin{lstlisting}[caption=Loop over element vertices., label={lst:loop_element_vertices}]
@@ -78,15 +175,23 @@ do iv=1,Nvert(elem_type)
 enddo
 \end{lstlisting}
 
-\noindent where \var{elem\_type} is a variable specifying the element type, and \routine{Nvert(\var{elem\_type})} is a function returning the number of vertices for each element type. In this way, we avoid writing four separate versions of the code for the four types of elements but cover all four cases with just one piece of code. Please review carefully content of the module to learn about the existing element utilities and the underlying logic. The module starts by listing master element coordinates for the four element vertices. This defines the geometry of master elements and establishes enumeration of master elements vertices. The element edges are listed next by providing numbers of the corresponding endpoint vertices. This again serves a double purpose: we enumerate the element edges and provide the corresponding {\em local edge orientations}. Finally, we list element faces by providing face to vertex nodes connectivities. This again implies the local face orientations. Finally, following the specified orientations, we provide local parametrizations for element edges and faces. All these utilities are necessary for computing element matrices. Please visit any element routine to see examples how to use the utilities provided in the module.
+\noindent where \var{elem\_type} is a member variable of an element specifying the element type---\code{`bric'}, \code{`tetr'}, \code{`pris'}, \code{`pyra'}---and \routine{Nvert(\var{elem\_type})} is a function returning the number of vertices for each element type. In this way, we avoid writing four separate versions of the code for the four types of elements but cover all four cases with just one piece of code. The user may want to review the \code{module} \module{element\_data} to learn about the existing element utilities and the underlying logic. 
+
+The \module{element\_data} module starts by listing master element coordinates for the four element vertices. This defines the geometry of master elements and establishes enumeration of master element vertices. The element edges are listed next by providing numbers of the corresponding endpoint vertices. This again serves a double purpose: we enumerate the element edges and provide the corresponding local edge orientations. Finally, we list element faces by providing face-to-vertex node connectivities. This again implies the local face orientations. Finally, following the specified orientations, we provide local parametrizations for element edges and faces. All these utilities are necessary for computing element matrices. The \routine{elem} routines provided in the model problem implementations (Appendix~\ref{chap:examples}) illustrate how to use the utilities provided in the module.
 
 \paragraph{Initial mesh generation. Data structure arrays \var{ELEMS} and \var{NODES}.}
 
-Following the input of geometry for the GMP package, an initial mesh data is generated. The initial mesh generator represents an interface between the GMP package and the \hp3D code, and it does essentially  two things: it generates initial mesh vertex, edge, face and element middle nodes in data structure array \var{NODES}, and it generates initial mesh elements in data structure array \var{ELEMS}, including element-to-nodes connectivities. Both \var{ELEMS} and \var{NODES} are arrays of objects. Array \var{ELEMS} is static, its dimension equals the number of initial mesh elements equal to the number of GMP blocks. Arrays \var{NODES} is dynamic, it will grow during the mesh refinements as new nodes will be generated. The elements arising from mesh refinements are logically identified with their middle nodes. We first generate the initial mesh elements middle nodes so the number of an initial mesh element from \var{ELEMS} coincides with the corresponding middle node number in \var{NODES}.
+Following the input of geometry for the Geometry Modeling Package (GMP), an initial mesh is generated. The initial mesh generator represents an interface between the GMP package and the \hp3D code, and it does essentially two things: it generates initial mesh vertex, edge, face and element middle nodes in the data structure array \var{NODES}, and it generates initial mesh elements in data structure array \var{ELEMS}, including element-to-nodes connectivities. Both \var{ELEMS} and \var{NODES} are arrays of objects provided by the \module{data\_structure3D} module. Array \var{ELEMS} is static; its dimension equals the number of initial mesh elements equal to the number of GMP blocks. Array \var{NODES} is dynamic; it grows during the mesh refinements as new nodes are generated. The elements arising from mesh refinements are logically identified with their middle nodes. Middle node numbers are thus unique identifiers for an element, and the number of a node always coincides with the location in the \var{NODES} array. For the initial mesh, the number of an initial mesh element in \var{ELEMS} coincides with the corresponding middle node number in \var{NODES}.
+
+
+\subsection{Looping through active mesh elements}
+\label{sec:element-nodes}
+
+The \var{NODES} array stores all (abstract) element nodes---vertices, edges, faces, and middle nodes---whether they are part of the current mesh or not. In order to access active mesh elements (associated with active middle nodes), the \hp3D code provides a functionality to loop through the active mesh elements in their ``natural'' order defined by the tree structure of the \var{NODES} array.
 
 \paragraph{Natural order of elements.}
 
-A typical loop through the active elements in the mesh is executed by using routine \routine{datstrs/nelcon}:
+A typical loop through the active elements in the mesh is executed by using routine \file{datstrs/}\routine{nelcon}:
 
 \begin{lstlisting}[caption=Loop over active mesh elements., label={lst:loop_active_mesh_elements}]
 mdle = 0
@@ -96,54 +201,66 @@ do iel=1,NRELES
 enddo
 \end{lstlisting}
 
-The \routine{nelcon} routine is based on nodal trees restricted to element middle nodes only. See \cite{hpbook,hpbook2} for additional information.
+where \var{NRELES} is a global variable storing the number of active mesh elements. The \routine{nelcon} routine is based on nodal trees restricted to element middle nodes only. See \cite{hpbook,hpbook2} for additional information.
 
 \begin{remark}
-For MPI/OpenMP parallel execution of loops over active mesh elements, the \hp3D \module{data\_structure3D} module builds two arrays, \var{ELEM\_ORDER} and \var{ELEM\_SUBD}, based on \routine{nelcon}. \var{ELEM\_ORDER} is an array of all active mesh elements, and \var{ELEM\_SUBD} is an array of active mesh elements within a subdomain of a distributed mesh. Each one is built (resp.\ updated) by using \routine{nelcon} after each mesh refinement or mesh repartitioning. See Section~\ref{sec:mpi-modules} for additional details.
+For MPI/OpenMP parallel execution of loops over active mesh elements, the \hp3D \module{data\_structure3D} module builds two arrays, \var{ELEM\_ORDER} and \var{ELEM\_SUBD}, based on \routine{nelcon}. \var{ELEM\_ORDER} is an array of all active mesh elements, and \var{ELEM\_SUBD} is an array of active mesh elements within a subdomain of a distributed mesh. Each one is built (resp.~updated) by using \routine{nelcon} after each mesh refinement or mesh repartitioning. See Section~\ref{sec:mpi-modules} for additional details.
 \end{remark}
+
 
 \subsection{Uniform mesh refinements}
 \label{subsec:uniform-refinements}
 
-Isotropic uniform $h$-refinements are easily executed via routine \routine{global\_href}. Anisotropic uniform $h$-refinement routines are also provided for some cases (e.g.~\routine{global\_href\_aniso\_bric}) but should be used carefully since particular anisotropic refinements may not be compatible with a hybrid mesh of different element types (see refinement flags in Section~\ref{sec:adaptivity}). 
+An isotropic uniform $h$-refinement can be executed via routine \routine{global\_href}. Anisotropic uniform $h$-refinement routines are also provided for some cases (e.g.~\routine{global\_href\_aniso\_bric}) but should be used carefully since particular anisotropic refinements may not be compatible with a hybrid mesh of different element types (see refinement flags in Section~\ref{sec:adaptive-refinements}).
 
 Analogously, isotropic uniform $p$-refinements are easily executed via routine \routine{global\_pref}. For the case of $p$-refinements, the user may also execute global unrefinements (i.e.~uniformly lowering the polynomial order of approximation) via routine \routine{global\_punref}.
 
-Adaptive $hp$-refinements are discussed in Section~\ref{sec:adaptivity}.
+Adaptive $hp$-refinements are discussed in Section~\ref{sec:adaptive-refinements}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Fundamental Finite Element Algorithms}
 \label{sec:FE_algorithms}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-The code supports two fundamental FE algorithms: solution of a boundary-value problem, and an adaptive solution of a boundary-value problem. In the second case, the user must provide an additional routine providing an a-posteriori error estimate. Recall that the DPG method comes with a residual error estimate built-in so no additional work is necessary.
+The code supports two fundamental FE algorithms: solution of a boundary-value problem and adaptive solution of a boundary-value problem. In the second case, the user must provide an additional routine providing an a-posteriori error estimate. This section outlines the assembly and linear solve of a finite element system in \hp3D. Adaptive solutions are discussed in Section~\ref{sec:adaptivity} (adaptive solver and refinements) and Section~\ref{sec:parallel-adaptivity} (parallel computation of an adaptive solution).
 
-\paragraph{Linear solver.}
+\subsection{Assembly}
 
-The code provides interfaces to several linear solvers. The global stiffness matrix and load vector are either assembled automatically by the solver interface or have to be assembled by the user. In either case, the assembly routine must loop through all {\em active} elements in the mesh and compute the corresponding element matrices. This implementation of the element stiffness matrix and load vector are in the user-provided element routine \routine{elem}. For each active element \var{mdle}, the code calls \routine{elem} from routine \routine{src/constrs/celem\_system.F} which returns the information about the {\em modified element} corresponding to \var{mdle} and the modified element matrices. For a detailed discussion of \routine{celem\_system}, see \cite{hpbook,hpbook2}. In summary, the \routine{celem\_system} routine compiles the information about the modified element nodes, the corresponding number of DOFs, performs partial assembly to account for the constrained nodes, and enforces the Dirichlet BCs by computing the modified load vector and eliminating the Dirichlet DOFs from the system of equations. The solution DOFs returned by the solver are then stored in the data structure arrays.
+The finite element assembly process takes element-local stiffness matrices and load vectors (provided by the user routine \routine{elem}) and assembles the local blocks into a sparse global matrix. This process also includes much of the sophisticated \hp3D machinery for constrained approximation, as well as modifications due to accounting for Dirichlet data and static condensation of element-interior degrees of freedom. The assembly routines are hidden from the user and do not usually need to be interacted with directly. Instead, the user calls one of the provided linear solver interfaces which perform the assembly process for the user application.
 
+The global stiffness matrix and load vector are assembled automatically by the solver interface, i.e.~the assembly routines loop through all {\em active} elements in the mesh and compute the corresponding element matrices. This implementation of the element stiffness matrix and load vector are in the user-provided element routine \routine{elem}. For each active element \var{mdle}, the code calls \routine{elem} from routine \file{src/constrs/}\routine{celem\_system} which returns the information about the {\em modified element} corresponding to \var{mdle} and the modified element matrices. For a detailed discussion of \routine{celem\_system}, see \cite{hpbook,hpbook2}. In summary, the \routine{celem\_system} routine compiles the information about the modified element nodes, the corresponding number of DOFs, performs partial assembly to account for the constrained nodes, and enforces the Dirichlet BCs by computing the modified load vector and eliminating the Dirichlet DOFs from the system of equations. The solution DOFs returned by the solver are then stored in the data structure arrays.
 
-\paragraph{Adaptive solver.}
+\subsection{Linear solver}
 
-The simplest adaptive algorithm executes the standard logical sequence:
-\[
-	\text{Solve} \longrightarrow
-	\text{Estimate} \longrightarrow
-	\text{Mark} \longrightarrow
-	\text{Refine} 
-\]
-until a prescribed global error tolerance is met. Error estimation involves a loop through elements and computation of element {\em error indicators} plus a possible additional information aiming at selection of an optimal element refinement. Once the element error indicators are known for all active elements, selected elements are {\em marked} for the preselected $hp$-refinements. Two marking strategies are most popular: {\em the greedy strategy} and the {\em D\"orfler strategy}. In the greedy strategy, we first determine the maximum element error indicator \var{error\_max}, and then mark for refinements all elements whose error indicators exceed a prespecified percentage of \var{error\_max}, i.e.,
-\begin{center}
-	\var{error} $>$ \var{perc} * \var{error\_max}.
-\end{center}
-In D\"orfler's strategy \cite{dorfler1996marking}, the elements are first organized in the order of descending element error indicators, then the total error \var{error\_glob} is computed by summing up the element error indicators, and lastly the first $n$ elements refined from the list that satisfy the criterion:
+The code provides interfaces to several linear solvers:
+\begin{itemize}
+	\item{ MUMPS: \\
+		Different MUMPS solver options are available to the user via the following solver interfaces:
+		\begin{itemize}
+			\item{ OpenMP MUMPS: \routine{mumps\_sc} \\
+			Sequential MUMPS solver with OpenMP support.
+			}
+			\item{ MPI/OpenMP MUMPS: \routine{par\_mumps\_sc} \\
+			Distributed MUMPS solver with OpenMP support.
+			}
+			\item{ MPI/OpenMP Nested Dissection: \routine{par\_nested} \\
+			Statically condenses subdomain interior DOFs onto subdomain interfaces and subsequently solves the coupled interface problem via the distributed MUMPS solver.
+			}
+		\end{itemize}
+	}
+	\item{ MKL\_PARDISO: \routine{pardiso\_sc} \\
+		Intel MKL's PARDISO solver (OpenMP support only) is available via solver interface \routine{pardiso\_sc}, provided the library code was compiled with flag \code{\var{HP3D\_USE\_INTEL\_MKL} = 1} (see Section~\ref{sec:configure-file}).
+	}
+	\item{ Frontal Solver: \routine{solve1} \\
+		Homegrown sequential solver (no MPI or OpenMP support) used mainly for debugging purposes. The solver interface is implemented in the routine \routine{solve1}.
+	}
+	\item{ PETSc: \routine{petsc\_solve} \\
+		The PETSc solver interface supports a variety of external solver options, depending upon the PETSc library \hp3D was linked to during compilation (cf.~Section~\ref{sec:dependencies}).
+	}
+\end{itemize}
+Some of the solver interfaces take a single-character input argument \code{`H'} or \code{`G'}, indicating whether the linear system is symmetric/Hermitian or not, in order to perform optimized linear algebra computations. In some cases, the user may also specify \code{`P'} to indicate positive-definiteness of the system.
 
-\[
-\sum_{j=1}^n \var{elem\_error}_j > \var{perc} * \var{error\_glob} .
-\]
+The auxiliary data structures for assembly and linear solve of the finite element system are deallocated before the solver interface returns. On return, the finite element solution (i.e.~solution degrees of freedom) has been stored in the data structure and is available to the user for post-processing.
 
-The elements selected for refinement are placed on a separate list along with the requested refinement flags.
-
-How to execute $hp$-adaptive refinements is discussed in Section~\ref{sec:adaptivity}.
 
 %\input{Chapters/3_BASICS/comments}
 

@@ -212,27 +212,41 @@ Constrained approximation, modification for Dirichlet nodes, and static condensa
    enddo; enddo; enddo
 \end{lstlisting}
 
-\subsection{DPG Primal implementation}
+\subsection{DPG primal implementation}
 \label{subsec:poisson-ultraweak}
+
+Compared
+
+Implementation is provided in \file{problems/MPI\_POISSON/DPG\_PRIMAL}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Linear Elasticity Problems}
 \label{sec:elasticity}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\subsection{Galerkin implementation}
-\label{subsec:maxwell-galerkin}
+%\subsection{Galerkin implementation}
+%\label{subsec:maxwell-galerkin}
+
+Linear elasticity will be added in a future version of the user manual.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Maxwell Problems}
 \label{sec:maxwell}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+Linear time-harmonic Maxwell.
+
+For time-harmonic Maxwell problems, the solution is complex-valued; therefore, the \hp3D library must be compiled with the preprocessing flag \code{\var{COMPLEX} = 1}.
+
 \subsection{Galerkin implementation}
 \label{subsec:maxwell-galerkin}
 
-\subsection{Ultraweak implementation}
+Implementation is provided in \file{problems/MAXWELL/GALERKIN}.
+
+\subsection{DPG ultraweak implementation}
 \label{subsec:maxwell-galerkin}
+
+Ultraweak Maxwell will be added in a future version of the user manual.
 
 
 

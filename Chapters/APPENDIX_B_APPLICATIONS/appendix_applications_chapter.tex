@@ -16,12 +16,15 @@ Fiber amplifiers are optical waveguides made of silica glass designed for power-
 
 In addition to the coupled multiphysics formulation, the application employs a high-order discretization and anisotropic adaptive refinements \cite{henneking2021pollution} for a hybrid mesh consisting of both prismatic and hexahedral elements with curvilinear geometry. The application also served as the first real testbed problem for large-scale computation with the MPI/OpenMP parallel \hp3D code, successfully scaling up to thousands of wavelengths and $\sim$1B degrees of freedom \cite{henneking2021phd,henneking2022parallel}. The DPG FE implementation of the Maxwell equations also features fast integration routines via sum factorization for both hexahedral and prismatic elements \cite{mora2019fast,badger2020fast}.
 
-\section{Adaptive Solution of High-Frequency Acoustic and EM Scattering}
+\section{Adaptive Solution of High-Frequency Acoustic and Electromagnetic Scattering}
 \label{sec:adaptive}
 
-Scattering of high-frequency acoustic (Helmholtz) and electromagnetic (Maxwell) beams. See \cite{petrides2017adaptive,petrides2019phd,petrides2021adaptive} by Socratis Petrides.
+Accurate and efficient numerical simulations of wave propagation phenomena are very crucial in numerous engineering and physics applications, such as non-destructive testing, plasma fusion, modeling of meta-materials and biomedical and radar imaging. With traditional discretization methods, these simulations are extremely challenging due to two major issues: instability and indefiniteness of the linear systems. Consequently, common cutting-edge elliptic solvers simply break down. The DPG method overcomes both issues. As a non-standard minimum residual method, it promises high accuracy, unconditional stability and definite linear systems.
 
-This work implemented PML techniques for both Helmholtz and Maxwell problems desribed in \cite{astaneh2018pml}.
+This work implemented a novel multigrid solver within \hp3D for linear systems arising from DPG discretizations with a special focus in acoustic and electromagnetic wave propagation problems. The construction is heavily based on the attractive properties of the DPG method, but also on well-established theory of Schwarz domain decomposition and multigrid methods. As it is showcased in \cite{petrides2019phd,petrides2021adaptive,petrides2017adaptive}, the method is stable and reliable, and it is suitable for adaptive $hp$-meshes. The solver works hand-in-glove with the built-in DPG error indicator to drive adaptive mesh refinements. Integrating the iterative solver with the adaptive refinement procedure enables efficient and accurate solutions to challenging problems in the high-frequency regime. A distributed parallel version of the DPG multigrid solver is currently under development and will be discussed in a future version of the user manual; the technology is also described detail in \cite{hpbook3}.
+
+%Scattering of high-frequency acoustic (Helmholtz) and electromagnetic (Maxwell) beams.
+%This work implemented PML techniques for both Helmholtz and Maxwell problems described in \cite{astaneh2018pml}.
 
 \section{Elastic Cylinder}
 \label{sec:hose}
@@ -36,7 +39,8 @@ By Jaime D.~Mora.
 \section{Thermo-Viscoelasticity}
 \label{sec:visco-elasticity}
 
-Modeling of insulators in high-energy density electric motors (thermo-viscoelasticity) by Federico Fuentes.
+Modeling of insulators in high-energy density electric motors (thermo-viscoelasticity),\\
+by Federico Fuentes.
 
 \section{Acoustics of the Human Head}
 \label{sec:human-head}
