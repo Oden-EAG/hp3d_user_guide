@@ -45,6 +45,7 @@ Examples of Impedance BC will be included in a future version of the user manual
 The sophisticated $hp$-adaptive capabilities are one of the main selling points of the \hp3D finite element code. This section describes the basics of an adaptive solution procedure and how the user can execute $hp$-adaptive mesh refinements in the application code.
 
 \subsection{Adaptive solver}
+\label{sec:adaptive-solver}
 
 The simplest adaptive algorithm executes the standard logical sequence:
 \[
@@ -143,7 +144,7 @@ If enabled, this implies that interactions of bubble (interior) DOFs of an eleme
 \label{sec:coupled-variables}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-In \hp3D, problems with coupled variables may be defined in a way where the coupling happens over the entire domain, over part of the domain, or at an interface between different parts of the domain. In this section, we only focus on problems with variables supported in the entire mesh.
+In \hp3D, problems with coupled variables may be defined in a way where the coupling happens over the entire domain, over part of the domain, or at an interface between different parts of the domain. This section primarily focuses on problems with variables supported in the entire mesh.
 
 \paragraph{Computing with multiple physics variables.}
 

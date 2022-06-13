@@ -10,7 +10,7 @@
 \section{Poisson Problems}
 \label{sec:poisson}
 
-Poisson equation with inhomogeneous Dirichlet BC:
+For the first model problem implementation, we consider the Poisson problem with inhomogeneous Dirichlet BC:
 \begin{alignat*}{3}
 	- \div \nabla u &= f && \quad \text{in } \Omega \, , \\
 	u &= u_0 && \quad \text{on } \Gamma \, .
@@ -30,61 +30,44 @@ Classical variational formulation:
 \subsection{Galerkin implementation}
 \label{subsec:poisson-galerkin}
 
-Implementation in \file{problems/MPI\_POISSON/GALERKIN}.
+The Galerkin FE implementation of the problem is located in the application directory \file{problems/POISSON/GALERKIN}. In the remainder of this section, file paths may be given as relative paths within the application directory.
 
 Input files:
 \begin{itemize}
-	\item \file{control}
-	\item \file{physics}
-	\item \file{geometry}
-\end{itemize}
-
-Driver and required routines:
-\begin{itemize}
-	\item \routine{main}
-	\item \routine{set\_initial\_mesh}
-	\item \routine{dirichlet}
-	\item \routine{elem}
-\end{itemize}
-
-Input files:
-\begin{itemize}
-\itemsep 15pt
-\item{
-\file{control}: sets global control variables, e.g.\\
-\begin{itemize}
-	\item \var{NEXACT} $\in \{$ \code{0,1} $\}$: indicates whether the exact solution is known.
-	\item \var{EXGEOM} $\in \{$ \code{0,1} $\}$: indicates whether isoparametric or exact-geometry elements are used.
-\end{itemize}
-}
-\item
-{
-\file{physics}: sets initially allocated nodes and physics variables.\\[5pt]
-\begin{lstlisting}[caption=\file{MPI\_POISSON/GALERKIN/input/physics} input file.]
+	\item{\file{control/control}: sets global control variables, e.g.
+	\begin{itemize}
+		\item \var{NEXACT} $\in \{$ \code{0,1} $\}$: indicates whether the exact solution is known.
+		\item \var{EXGEOM} $\in \{$ \code{0,1} $\}$: indicates whether isoparametric or exact-geometry elements are used.
+	\end{itemize}
+	}
+	\item{\file{input/physics}: sets initially allocated nodes and physics variables.
+\begin{lstlisting}[caption=\file{POISSON/GALERKIN/input/physics} input file.]
 100000              MAXNODS, nodes anticipated
 1                   NR_PHYSA, physics attributes
 field   contin  1   H1 variable
 \end{lstlisting}
-\begin{itemize}
-	\vskip -5pt
-	\item \code{`field   contin  1'} specifies (nickname, approx.~space, num.~components) of a variable.
-	\item Approx.~spaces: $H^1$ -- \code{contin}, $H(\tcurl)$ -- \code{tangen}, $H(\tdiv)$ -- \code{normal}, $L^2$ -- \code{discon}.
-\end{itemize}
-}
-\item
-{
-\file{geometry}: defines the initial geometry mesh.
-}
+	\begin{itemize}
+		\item The value of \var{MAXNODS} does not have to be precise; if more nodes are needed, the code allocates them on-the-fly. However, it is recommended for efficiency that the code does not reallocate, as well as not selecting \var{MAXNODS} much larger than needed.
+		\item \code{\var{NR\_PHYSA}=1} specifies that \emph{one} physics variable is declared.
+		\item \code{`field   contin  1'} specifies ``nickname, approximation space, number of components'' of a variable. The approximation spaces are: $H^1$ -- \code{contin}, $H(\tcurl)$ -- \code{tangen}, $H(\tdiv)$ -- \code{normal}, $L^2$ -- \code{discon}.
+		\item For this Galerkin FE formulation, one $H^1$ variable is needed.
+	\end{itemize}
+	}
+	\item{\file{geometries/hexa\_orient0}: defines the initial geometry mesh (a cube).}
 \end{itemize}
 
-Routine \routine{set\_initial\_mesh}: for \emph{each} initial mesh element, this routine sets
+Next, we take a look at the required routines that must be provided by the user:
 \begin{itemize}
-	\item the supported physics variables;
-	\item the initial polynomial order of approximation;
-	\item the boundary condition flags for element faces on the boundary.
-\end{itemize}
-
-\begin{lstlisting}[caption=\file{MPI\_POISSON/GALERKIN/}\routine{set\_initial\_mesh} routine.]
+	\itemsep 0pt
+	\item
+	{\routine{set\_initial\_mesh}:\\
+	for \emph{each} initial mesh element, this routine sets
+	\begin{itemize}
+		\item the supported physics variables;
+		\item the initial polynomial order of approximation;
+		\item the boundary condition flags for element faces on the boundary.
+	\end{itemize}
+\begin{lstlisting}[caption=\file{POISSON/GALERKIN/}\routine{set\_initial\_mesh} routine.]
 !..loop over initial mesh elements
    do iel=1,NRELIS
 
@@ -115,34 +98,35 @@ Routine \routine{set\_initial\_mesh}: for \emph{each} initial mesh element, this
       call encodg(ibc(1:6,1),10,6, ELEMS(iel)%bcond(1))
    enddo
 \end{lstlisting}
-
-Routine \routine{dirichlet}:
-\begin{itemize}
+	}
+	\item
+	{\routine{dirichlet}:
+	\begin{itemize}
 	\item User-provided routine required by the system routine \routine{update\_Ddof} which computes the Dirichlet DOFs for element nodes (vertices, edges, faces) with a non-homogeneous Dirichlet BCs. 
 	\item \routine{update\_Ddof} interpolates $H^1$, $H(\tcurl)$, $H(\tdiv)$ Dirichlet data using \emph{projection-based} interpolation.\footnote{\fullcite{demkowicz2008interp}}
 	\item Required only if non-homogeneous Dirichlet BCs have been set by the user in \routine{set\_initial\_mesh}.
 \end{itemize}
 
-\begin{lstlisting}[caption=\file{MPI\_POISSON/GALERKIN/common/}\routine{dirichlet} routine.]
+\begin{lstlisting}[caption=\file{POISSON/GALERKIN/common/}\routine{dirichlet} routine.]
 !  routine dirichlet: returns Dirichlet data at a point
-!     in:   Mdle          - middle node number
-!           X             - a point in physical space
-!           Icase         - node case (specifies what variables are supported)
-!     out:  ValH, DvalH   - value of the H1 solution, corresponding first derivatives
-!           ValE, DvalE   - value of the H(curl) solution, corresponding first derivatives
-!           ValV, DvalV   - value of the H(div) solution, corresponding first derivatives
+!   in:   Mdle          - middle node number
+!         X             - a point in physical space
+!         Icase         - node case (specifies supported variables)
+!   out:  ValH, DvalH   - value of the H1 solution, 1st derivatives
+!         ValE, DvalE   - value of the H(curl) solution, 1st derivatives
+!         ValV, DvalV   - value of the H(div) solution, 1st derivatives
 subroutine dirichlet(Mdle,X,Icase, ValH,DvalH,ValE,DvalE,ValV,DvalV)
 \end{lstlisting}
-
-Routine \routine{elem}:
-\begin{itemize}
+	}
+	\item
+	{\routine{elem}:
+	\begin{itemize}
 	\item User-provided routine that computes the element-local stiffness matrix and load vector.
 	\item System module \module{assembly} provides global arrays for this purpose:
 	\begin{itemize}
 		\item \var{ALOC(:,:)\%array}: Element-local stiffness matrix.
 		\item \var{BLOC(:)\%array}: Element-local load vector.
 		\item These arrays are declared \omp{omp threadprivate} for shared-memory parallel assembly of different element matrices with OpenMP threading.
-		\item \var{ALOC}, \var{BLOC} support coupled multiphysics problems (more about this later).
 	\end{itemize}
 \end{itemize}
 
@@ -152,7 +136,7 @@ Routine \routine{elem}:
 Constrained approximation, modification for Dirichlet nodes, and static condensation of element-interior (bubble) DOFs are automatically done afterwards by the system routine \routine{celem\_system} which provides the \emph{modified element} matrices to the assembly procedure.
 \end{remark}
 
-\begin{lstlisting}[caption=\file{MPI\_POISSON/GALERKIN/common/}\routine{elem} routine]
+\begin{lstlisting}[mathescape,caption=\file{POISSON/GALERKIN/}\routine{elem} routine]
 !..determine element type; number of vertices, edges, and faces
    etype = NODES(Mdle)%type
    nrv = nvert(etype); nre = nedge(etype); nrf = nface(etype)
@@ -211,13 +195,28 @@ Constrained approximation, modification for Dirichlet nodes, and static condensa
 
    enddo; enddo; enddo
 \end{lstlisting}
+	}
+\end{itemize}
+
+This concludes the list of necessary input files and routines required for defining the application code from the library-perspective. However, the user is encouraged to take a look at the remaining files within the \file{POISSON/GALERKIN} directory which include the driver \routine{main} and a variety of auxiliary files. In a future version of the user manual, we will include a discussion of these auxiliary files as well.
 
 \subsection{DPG primal implementation}
 \label{subsec:poisson-ultraweak}
 
-Compared
+Broken primal DPG formulation:
+\[
+\left\{
+\begin{array}{llll}
+	(u, \hat \sigma_n) \in H^1(\Omega) \times H^{-1/2}(\Gamma_h): u = u_0 \text{ on } \Gamma \, , \\[5pt]
+	(\nabla u, \nabla v) - \lb \hat \sigma_n , v \rb_{\Gamma_h} 
+	= (f,v) \, ,\quad v \in H^1(\Omega_h) \, .
+\end{array}
+\right.
+\]
 
-Implementation is provided in \file{problems/MPI\_POISSON/DPG\_PRIMAL}.
+Compared to the Galerkin FE implementation, the primal DPG implementation is mostly different in the \routine{elem} routine.
+
+The implementation is provided in \file{problems/POISSON/PRIMAL\_DPG}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Linear Elasticity Problems}
@@ -234,14 +233,53 @@ Linear elasticity will be added in a future version of the user manual.
 \label{sec:maxwell}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Linear time-harmonic Maxwell.
+For time-harmonic Maxwell problems, the solution is complex-valued; the \hp3D library must therefore be compiled with preprocessing flag \code{\var{COMPLEX}=1}.
 
-For time-harmonic Maxwell problems, the solution is complex-valued; therefore, the \hp3D library must be compiled with the preprocessing flag \code{\var{COMPLEX} = 1}.
+\begin{itemize}
+\item
+{
+Linear time-harmonic Maxwell equations:
+\begin{alignat*}{3}
+	\curl \bs E + i \omega \mu \bs H
+	&= \bs 0 &\quad \text{in } \Omega \, , \\
+	\curl \bs H - (i \omega \eps + \sigma) \bs E 
+	&= \bs J^{\text{imp}} &\quad \text{in } \Omega \, , \\
+	\bs n \times \bs E &= \bs n \times \bs E_0 &\quad \text{on } \Gamma \, .
+	test
+\end{alignat*}
+}
+\item
+{
+Curl--curl formulation:
+\begin{alignat*}{3}
+	\curl (\mu^{-1} \curl \bs E) - (\omega^2 \eps - i \omega \sigma) \bs E
+	&= -i \omega \bs J^{\text{imp}}  &\quad \text{in } \Omega \, , \\
+	\bs n \times \bs E &= \bs n \times \bs E_0 &\quad \text{on } \Gamma \, .
+	test
+\end{alignat*}
+}
+\item
+{
+Classical variational formulation:
+\[
+\left\{
+\begin{array}{lll}
+	\bs E \in \Hcurl : \bs n \times \bs E = \bs n \times \bs E_0 \text{ on } \Gamma \, , \\[5pt]
+	(\mu^{-1} \curl \bs E,\curl \bs F)_\Omega - ((\omega^2 \eps - i \omega \sigma) \bs E, \bs F)_\Omega
+	= -i \omega (\bs J^{\text{imp}}, \bs F)_\Omega \, , \\[5pt]
+	\hfill
+	\quad \bs F \in \Hcurl \, : \, \bs n \times \bs F = \bs 0 \text{ on } \Gamma \, .
+\end{array}
+\right.
+\]
+The formulation involves just one unknown $\bs E \in \Hcurl$, defined on the whole domain.
+}
+\end{itemize}
 
 \subsection{Galerkin implementation}
 \label{subsec:maxwell-galerkin}
 
-Implementation is provided in \file{problems/MAXWELL/GALERKIN}.
+The implementation is provided in \file{problems/MAXWELL/GALERKIN}.
 
 \subsection{DPG ultraweak implementation}
 \label{subsec:maxwell-galerkin}

@@ -26,7 +26,7 @@ program main
    call mpi_w_finalize
 end program main
 \end{lstlisting}
-These calls are required for initializing and closing the MPI environment, including hybrid MPI/OpenMP threading, as well as initializing and closing the Zoltan environment used for load balancing (see Section~\ref{sec:load-balancing}). The calls to \routine{mpi\_w\_init} and \routine{mpi\_w\_finalize} should also be made if the program is executed by a single MPI process. 
+These calls are required for initializing and closing the MPI environment, including hybrid MPI/OpenMP threading, as well as initializing and closing the Zoltan environment used for load balancing (see Section~\ref{sec:load-balancing}). The calls to \routine{mpi\_w\_init} and \routine{mpi\_w\_finalize} should be made even if the program is executed by a single MPI process. 
 
 The user is also encouraged to use the \routine{mpi\_w\_handle\_err(\var{Ierr}, \var{Str})} routine of the \module{mpi\_wrapper} module which prints the error code and a user-defined error string \var{Str} if the return code \var{Ierr} of an MPI function is not equal to \var{MPI\_SUCCESS}. For example:
 \begin{lstlisting}[caption=Checking and printing MPI error codes., label={lst:mpi_w_handle_error}]
@@ -37,17 +37,16 @@ The user is also encouraged to use the \routine{mpi\_w\_handle\_err(\var{Ierr}, 
 \paragraph{\module{mpi\_param} module.} This module stores global parameters and variables related to MPI parallelism. The user may want to make use of the following parameters that are initialized with the MPI environment:
 \begin{itemize}
 	\item \code{integer, save      ::~\var{NUM\_PROCS}} \\
-	Total number of MPI processes. \\
-	Return value of \routine{MPI\_COMM\_SIZE} for the \var{MPI\_COMM\_WORLD} communicator.
+	Total number of MPI processes. Return value of \routine{MPI\_COMM\_SIZE} for the \var{MPI\_COMM\_WORLD} communicator.
 	\item \code{integer, save      ::~\var{RANK}} \\
-	MPI rank of each MPI process. \var{RANK} $\in \{ \code{0}, \code{1}, \dots, \code{\var{NUM\_PROCS}-1} \}$. \\
+	MPI rank of each MPI process. \var{RANK} $\in \{ \code{0}, \code{1}, \dots, \code{\var{NUM\_PROCS}-1} \}$.
 	Return value of \routine{MPI\_COMM\_RANK} for the \var{MPI\_COMM\_WORLD} communicator.
 	\item \code{integer, parameter ::~\var{ROOT}  = 0} \\
-	\hp3D defines the MPI process with \code{\var{RANK} 0} as the \emph{root process} (or equivalently, \emph{host process}). Frequently, the root process takes a different execution path from the remaining processes (e.g., in user-interactive computation---see Section~\ref{sec:master-worker-paradigm}, or in I/O operations).
+	\hp3D defines the MPI process with \code{\var{RANK} 0} as the \emph{root process} (or equivalently, \emph{host process}). Frequently, the root process takes a different execution path from the remaining processes (e.g.~in user-interactive computation---see Section~\ref{sec:master-worker-paradigm}, or in I/O operations).
 \end{itemize}
 
 \paragraph{\module{par\_mesh} module.}
-Most of the essential mesh (re-)partitioning functionality in \hp3D is provided by the module \module{src/modules/par\_mesh}. It should be emphasized again that the initial mesh is \emph{not} distributed. In other words, initially, the degrees of freedom are present on all MPI processes, i.e., every MPI process has its own copy of the initial FE mesh. The \module{par\_mesh} module provides a \routine{distr\_mesh} routine that can be called by the user to distribute the mesh at any point, either right after initialization or after some mesh refinements. The \routine{distr\_mesh} routine also serves as a routine for repartitioning (resp.\ load balancing)---see Section~\ref{sec:load-balancing}.
+Most of the essential mesh (re-)partitioning functionality in \hp3D is provided by the module \file{src/modules/}\module{par\_mesh}. It should be emphasized again that the initial mesh is \emph{not} distributed. In other words, initially, the degrees of freedom are present on all MPI processes, i.e.~every MPI process has its own copy of the initial FE mesh. The \module{par\_mesh} module provides a \routine{distr\_mesh} routine that can be called by the user to distribute the mesh at any point, either right after initialization or after some mesh refinements. The \routine{distr\_mesh} routine also serves as a routine for repartitioning (resp.\ load balancing)---see Section~\ref{sec:load-balancing}.
 
 The \module{par\_mesh} module defines two important global variables that keep track of the current state of the mesh in the parallel environment:
 \begin{itemize}
@@ -143,8 +142,8 @@ With MPI and OpenMP enabled, the user will typically write a loop over elements 
 \end{lstlisting}
 
 \paragraph{OpenMP thread scheduling.}
-By default, an OpenMP-parallel loop uses \emph{static thread scheduling}, i.e., each loop iteration (resp.\ element workload) is statically assigned a-priori to a particular OpenMP thread.
-In context of $hp$-adaptively refined meshes with elements of different shape, this default strategy can lead to a severely unbalanced workload between OpenMP threads due to highly variable element workload. In this case, it is preferable to use \emph{dynamic thread scheduling}: by passing the OpenMP clause \omp{SCHEDULE(DYNAMIC)}, each thread is assigned one loop iteration (resp.\ element workload) at a time. Load balancing is thus also done on two levels: the distributed-memory level (a-priori load balancing by mesh repartitioning) and the shared-memory level (dynamic load balancing by OpenMP thread scheduling). While dynamic thread scheduling at runtime eliminates the need for a-priori load balancing work, it comes with a scheduling overhead at loop execution.
+By default, an OpenMP-parallel loop uses \emph{static thread scheduling}, i.e.~each loop iteration (resp.~element workload) is statically assigned a-priori to a particular OpenMP thread.
+In context of $hp$-adaptively refined meshes with elements of different shape, this default strategy can lead to a severely unbalanced workload between OpenMP threads due to highly variable element workload. In this case, it is preferable to use \emph{dynamic thread scheduling}: by passing the OpenMP clause \omp{SCHEDULE(DYNAMIC)}, each thread is assigned one loop iteration (resp.~element workload) at a time. Load balancing is thus also done on two levels: the distributed-memory level (a-priori load balancing by mesh repartitioning) and the shared-memory level (dynamic load balancing by OpenMP thread scheduling). While dynamic thread scheduling at runtime eliminates the need for a-priori load balancing work, it comes with a scheduling overhead at loop execution.
 This overhead can be somewhat reduced by assigning a few elements at a time (i.e., using an OpenMP \omp{chunk} size larger than one in the dynamic schedule) or by using a \omp{guided} schedule with variable chunk size. These options reduce scheduling overhead by somewhat compromising on load balance. The optimal choice of OpenMP schedule will depend on a variety of problem-dependent factors. Generally speaking: if the workload is similar for all elements, use either a static schedule or dynamic schedule with large chunk sizes; if the element workload varies much, use a dynamic schedule with small chunk sizes.
 
 \begin{remark}
@@ -156,7 +155,7 @@ As previously mentioned, element loops for matrix assembly and other tasks are p
 \label{sec:parallel-adaptivity}
 
 A typical use-case of performing element-loops is a-posteriori error estimation. An element-local error indicator can be computed independently and in parallel for each element. For instance, in the DPG method the element-local residual serves as a built-in error indicator \cite{demkowicz2017dpg}. The following steps illustrate how parallel MPI/OpenMP computation is used for computing adaptive refinements based on D\"orfler's marking strategy
-(see Section~\ref{sec:FE_algorithms}) using element residuals on a distributed mesh in \hp3D:
+(see Section~\ref{sec:adaptive-solver}) using element residuals on a distributed mesh in \hp3D:
 \begin{enumerate}
 \item
 	Compute element residuals within the subdomain:
@@ -231,12 +230,12 @@ There are numerous of ways of realizing a parallel driver for \hp3D applications
 	A production job passes all of the program arguments needed for execution during the program call. Pre-processing, mesh refinements, adaptive solutions, and post-processing operations are all driven by a pre-defined job script. This mode is suitable for any number of MPI processes and MPI/OpenMP configuration, including large-scale execution on many compute nodes.
 \end{itemize}
 
-As an example, we refer to the driver file \file{main.F90} of the Galerkin Poisson implementation in \file{problems/MPI\_POISSON/GALERKIN/}. In this driver implementation, a program argument ``\code{-job \var{JOB}}'' controls whether the program is executed in the interactive mode (\code{\var{JOB}.eq.0}) or production mode (\code{\var{JOB}.ne.0}). In production mode, the value of \var{JOB} may then define which one of a number of pre-defined job scripts should be executed. 
+As an example, we refer to the driver file \file{main.F90} of the Galerkin Poisson implementation in \file{problems/POISSON/GALERKIN/}. In this driver implementation, a program argument ``\code{-job \var{JOB}}'' controls whether the program is executed in the interactive mode (\code{\var{JOB}.eq.0}) or production mode (\code{\var{JOB}.ne.0}). In production mode, the value of \var{JOB} may then define which one of a number of pre-defined job scripts should be executed. 
 
 The remainder of this section is concerned with the implementation of the so-called \emph{master--worker paradigm} for the interactive mode of \hp3D applications in the parallel distributed-memory setting.
 
 \paragraph{Interactive mode in the sequential setting.}
-First, we introduce a typical interactive I/O screen employed by \hp3D's subroutines (e.g., see \file{problems/MPI\_POISSON/GALERKIN/main.F90}):
+First, we introduce a typical interactive I/O screen employed by \hp3D's subroutines (e.g., see \file{problems/POISSON/GALERKIN/main.F90}):
 
 \begin{lstlisting}[caption=Interactive mode in shared-memory execution., label={lst:interactive_mode_sequential}]
 !..user interface displaying menu in a loop
@@ -287,7 +286,7 @@ For context, a basic user menu could include the following user options:
  =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  \end{lstlisting}
 
-Similar I/O screens are utilized in various system debugging routines the user has access to (e.g., displaying nodal information via the interactive routine \routine{src/datstrs/result}). The mechanism for executing these routines in the distributed-memory setting is similar to the one described in the context of the application driver routine \routine{main} discussed here.
+Similar I/O screens are utilized in various system debugging routines the user has access to (e.g., displaying nodal information via the interactive routine \routine{src/datstrs/result}). The mechanism for executing these routines in the distributed-memory setting is similar to the one described in the context of the application driver \routine{main} discussed here.
 
 \paragraph{Interactive mode in the parallel setting.}
 As a general rule, the user always interacts with one distinct MPI process at a time. This MPI process---called the \emph{master}---is the \var{ROOT} process. All other MPI ranks are referred to as \emph{worker} processes. In this master--worker paradigm, user inputs are handled by the master process who communicates the input to the worker processes. For that reason, the parallel driver that handles the user interaction is split into two driver routines: \routine{master\_main} and \routine{worker\_main}.
@@ -344,50 +343,57 @@ In some circumstances, the user may want to interact directly with one of the wo
 \label{sec:load-balancing}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\paragraph{Adaptive Solution with Dynamic Load Balancing}
+The basic algorithm for an adaptive solution with dynamic load balancing is as follows:
 
-Adaptive solution process:\\
 \begin{enumerate}
-	\itemsep -15pt
-	\item Initialize mesh (not distributed) \\
-	\item (Re-)distribute the mesh (\routine{distr\_mesh} routine from \module{par\_mesh} module) \\
-	\item Solve \\
-	\item Estimate the error (end if solution is sufficiently accurate) \\
-	\item Mark elements for refinement \\
-	\item Refine the mesh ($hp$) \\
+	\itemsep 0pt
+	\item Initialize mesh (not distributed)
+	\item (Re-)distribute the mesh (\routine{distr\_mesh} routine from \module{par\_mesh} module)
+	\item Solve
+	\item Estimate the error (end if solution is sufficiently accurate)
+	\item Mark elements for refinement
+	\item Refine the mesh ($hp$)
 	\item Optionally, repartition the mesh for load balancing purposes (continue with Step 2); otherwise, continue with Step 3.
 \end{enumerate}
 
-In Step 6 (refinement), subdomain inheritance when breaking nodes, i.e.~the subdomain value \var{subd} of a newly created node ($h$-refinement) is inherited from the father node. This may lead to \emph{load imbalance}. The \hp3D interface to Zoltan is provided in the module \module{zoltan\_wrapper}. This module includes several of the above mentioned functionalities to the user: for example, \routine{zoltan\_w\_eval} evaluates the quality of the current mesh, and \routine{zoltan\_w\_set\_lb(\var{LB})} sets an internal parameter (\var{ZOLTAN\_LB}) determining the load balancing strategy. The mesh repartitioning begins with a call to the routine \routine{zoltan\_w\_partition(\var{Mdle\_subd})} that returns, for each active element (i.e., active middle node) in the mesh, the newly assigned subdomain for the repartitioned mesh. Having determined a new partition for the mesh, the data migration step follows. This functionality is implemented in the \routine{distr\_mesh} routine of the module \module{par\_mesh}. 
+In Step 6 (refinement), \hp3D implements subdomain inheritance when breaking nodes, i.e.~the subdomain value \var{subd} of a newly created node ($h$-refinement) is inherited from the father node. This may lead to \emph{load imbalance}. The \hp3D interface to the load balancing library Zoltan is provided in the module \module{zoltan\_wrapper}. This module includes several of the above mentioned functionalities to the user: for example, \routine{zoltan\_w\_eval} evaluates the quality of the current mesh, and \routine{zoltan\_w\_set\_lb(\var{LB})} sets an internal parameter (\var{ZOLTAN\_LB}) determining the load balancing strategy. The mesh repartitioning begins with a call to the routine \routine{zoltan\_w\_partition(\var{Mdle\_subd})} that returns, for each active element (i.e., active middle node) in the mesh, the newly assigned subdomain for the repartitioned mesh. Having determined a new partition for the mesh, the data migration step follows. This functionality is implemented in the \routine{distr\_mesh} routine of the module \module{par\_mesh}. 
 
-\module{zoltan\_wrapper} module:
+Routines provided by the \module{zoltan\_wrapper} module:
 \begin{itemize}
-	\item \routine{zoltan\_w\_eval}
-	\begin{itemize}
-		\item Evaluates the quality of the current mesh partitioning.
-	\end{itemize}
-	\item \routine{zoltan\_w\_set\_lb(\var{LB})}
-	\begin{itemize}
-		\item Sets global variable \var{ZOLTAN\_LB} to define partitioning algorithm.
-		\item \var{ZOLTAN\_LB} $\in \{$BLOCK, RANDOM, RCB, RIB, HSFC, GRAPH, FIBER$\}$.
-	\end{itemize}
-	\item \routine{zoltan\_w\_partition(\var{Mdle\_subd(1:NRELES)})}
-	\begin{itemize}
-		\item Returns new partitioning (subdomain number for each middle node) for the active mesh.
-	\end{itemize}
+	\itemsep 0pt
+	\item{\routine{zoltan\_w\_eval} \\
+		Evaluates the quality of the current mesh partitioning.
+	}
+	\item{\routine{zoltan\_w\_set\_lb(\var{LB})} \\
+		Sets global variable \var{ZOLTAN\_LB} to define partitioning algorithm.\\
+		\var{ZOLTAN\_LB} $\in \{$BLOCK, RANDOM, RCB, RIB, HSFC, GRAPH$\}$.
+	}
+	\item{\routine{zoltan\_w\_partition(\var{Mdle\_subd(1:NRELES)})} \\
+		Returns new partitioning (subdomain number for each middle node) for the active mesh.
+	}
 \end{itemize}
 
+Each one of the partitioning algorithms is executed through the Zoltan library, however relies on partitioners from other external libraries (e.g.~ParMETIS); the list includes both geometry-based and graph-based algorithms. For more information, we refer to Zoltan's documentation \cite{ZoltanOverviewArticle2002}.
 
-\underline{Data migration:} If element ownership has changed to a new subdomain, then the old owner and new owner of the element may exchange DOF data for each element node if requested by the user setting \code{\var{EXCHANGE\_DOF} = .true.}:
+\paragraph{Data migration.} If during repartitioning element ownership has changed to a new subdomain, then the old owner and new owner of the element may exchange DOF data for each element node if requested by the user setting the global variable \code{\var{EXCHANGE\_DOF} = .true.} in module \module{par\_mesh}:
 \begin{itemize}
-	\item For each element node, the old owner\\
-	1) packs nodal data, i.e., $H^1$-, $H(\tcurl)$-, $H(\tdiv)$-, and $L^2$-DOFs, into a buffer array;\\
-	2) sends nodal data to the new owner (point-to-point communication).
-	\item For each element node, the new owner\\
-	1) allocates nodal DOFs;\\
-	2) receives nodal data from the old owner (point-to-point communication);\\
-	3) unpacks nodal data from buffer array into $H^1$-, $H(\tcurl)$-, $H(\tdiv)$-, and $L^2$-DOFs.
+	\itemsep -2pt
+	\item For each element node, the old owner
+	\begin{enumerate}
+		\itemsep -2pt
+		\item packs nodal data, i.e., $H^1$-, $H(\tcurl)$-, $H(\tdiv)$-, and $L^2$-DOFs, into a buffer array;
+		\item sends nodal data to the new owner (point-to-point communication).
+	\end{enumerate}
+	\item For each element node, the new owner
+	\begin{enumerate}
+		\itemsep -2pt
+		\item allocates nodal DOFs;
+		\item receives nodal data from the old owner (point-to-point communication);
+		\item unpacks nodal data from buffer array into $H^1$-, $H(\tcurl)$-, $H(\tdiv)$-, and $L^2$-DOFs.
+	\end{enumerate}
 \end{itemize}
+
+Exchanging DOFs in this way is communication-intensive and should be deactivated by the user if not needed for the application. By default, \code{\var{EXCHANGE\_DOF} = .true.}.
 
 
 %\input{Chapters/5_PARALLEL/comments}
