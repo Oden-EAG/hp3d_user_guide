@@ -68,8 +68,8 @@ Please follow the following conventions when contributing to the LaTeX document.
    b) Do not use subsubsection
    d) Chapter and Section titles have capitalized significant words
    e) Paragraphs are only capitalized like normal text
-   f) Chapter and Section titles do not end 
-   c) Paragraphs end with a period "."
+   f) Chapter and Section titles do not end with a period
+   c) Paragraphs end with a period: "\paragraph{Paragraph title.}"
 
 8. Table and Figure Titles
    a) Place captions below the table or figure:
