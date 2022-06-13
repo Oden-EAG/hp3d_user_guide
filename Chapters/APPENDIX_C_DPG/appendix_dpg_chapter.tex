@@ -1,0 +1,206 @@
+%
+%!TEX root = ../../hp3D_user_guide.tex
+%
+
+\chapter{Implementation of the DPG Method}
+\label{chap:dpg}
+
+%--------------------------------------------------------------------
+
+The \hp3D library has been the main tool for the numerical studies with the Discontinuous Petrov--Galerkin (DPG) Method with Optimal Test Functions \cite{demkowicz2017dpg}. Many of the recent applications implemented in \hp3D (see Appendix~\ref{chap:applications}) were discretized with the DPG method. DPG implementations are straightforward to implement within the \hp3D framework, and we briefly review (in abstract form) how the DPG linear system is constructed. 
+
+Examples of model problem implementations with DPG are also provided (e.g.~Appendix~\ref{sec:poisson-primal}).
+
+\paragraph{The DPG mixed formulation.} Consider an abstract variational problem and its Petrov--Galerkin (PG) discretization:
+\[
+\left\{
+\begin{array}{lllll}
+u \in \trial \\
+b(u,v) = l(v) \quad v \in \test
+\end{array}
+\right.
+\qquad
+\longrightarrow
+\qquad
+\left\{
+\begin{array}{lllll}
+u_h \in \trial_h \subset \trial \\
+b(u_h,v_h) = l(v_h) \quad v_h \in \test_h \subset \test
+\end{array}
+\right.
+\]
+The {\em Petrov--Galerkin } discretization of the problem requires $\dim \trial_h = \dim \test_h$. For $\trial=\test$, the choice of $\trial_h=\test_h$ leads to the {\em Bubnov--Galerkin} (BG) method.
+In the {\em Petrov--Galerkin Method with Optimal Test Functions}, we embed the original problem into an equivalent {\em mixed problem}:
+\[
+\arraycolsep=2pt
+\left\{
+\begin{array}{lllll}
+\psi \in \test, u \in \trial \\
+(\psi,v)_\test + b(u,v) & = l(v)  \quad &\ v \in \test\\
+b(w,\psi) & = 0 &\ w \in \trial
+\end{array}
+\right.
+\qquad
+\longrightarrow
+\qquad
+\left\{
+\begin{array}{lllll}
+\psi_h \in \test_h ,\, u_h \in \trial_h \\
+(\psi_h,v_h)_\test + b(u_h,v_h) & = l(v_h) \quad &\ v_h \in \test_h \\
+b(w_h, \psi_h) & = 0 &\ w_h \in \trial_h
+\end{array}
+\right.
+\]
+The mixed formulation involves an additional unknown---$\psi \in \test$---the Riesz representation of the residual. On the continuous level $\psi = 0$ but its discretization $\psi_h \in \test_h$ is different from zero. The test inner product $(\cdot,\cdot)_\test$ enters directly the problem and affects the corresponding FE solution $u_h$. The main motivation for solving the more expensive mixed problem comes from stability considerations: the discrete spaces $\trial_h,\test_h$ need not longer be of the same dimension, and it is easier to satisfy the \emph{discrete inf--sup condition} by simply employing a larger discrete test space. We are solving effectively an overdetermined discrete system.
+
+An alternative is to test with a larger space of {\em broken} test functions $V(\Omega_h) \supset \test$ where $\Omega_h$ denotes the 
+decomposition of the domain into finite elements. Testing from a larger space of broken test functions necessitates the introduction of an 
+additional unknown---the {\em trace} $\hat{u}$---a Lagrange multiplier. The modified problem looks as follows:
+\[
+\left\{
+\begin{array}{llllll}
+u \in \trial ,\, \hat{u} \in \hat{\trial} \\
+\underbrace{b(u,v) + \langle \hat{u}, v \rangle_{\Gamma_h}}_{b_{\text{mod}}((u,\hat{u}),v)} = l(v) \quad v \in \test(\Omega_h)\, .
+\end{array}
+\right.
+\]
+The new group variable includes the original unknown and the trace unknown. The corresponding PG scheme with optimal test functions is known as the DPG method. The word {\em discontinuous} in the name refers to the use of broken (discontinuous) test spaces.
+\[
+\arraycolsep=2pt
+\left\{
+\begin{array}{llllll}
+u \in \trial ,\, \hat{u} \in \hat{\trial}, \psi \in \test(\Omega_h) \\
+(\psi,v)_{\test(\Omega_h)} + b(u,v) + \langle \hat{u}, v \rangle_{\Gamma_h} & = l(v) \quad &\quad v \in \test(\Omega_h)\\
+b(w, \psi) & = 0 &\quad w \in \trial\\
+\lb \hat{w}, v \rb_{\Gamma_h} & = 0 &\quad \hat{w} \in \hat{\trial} \, .
+\end{array}
+\right.
+\]
+
+The main advantage of using the broken test space in context of the PG method with optimal test functions is that the Gram matrix resulting from the discretization of
+the test inner product $(\psi,v)_\test$ becomes block-diagonal, and the additional variable $\psi \in V(\Omega_h)$ can be statically condensed on the
+element level. The whole ``DPG magic'' happens only in the element routine, the remaining part of the code remains the same as for the standard Bubnov--Galerkin method. The mixed problem,
+\[
+\left(
+\begin{array}{ccc}
+G & B & \hat{B} \\
+B^* & 0& 0\\
+\hat{B}^* & 0& 0
+\end{array}
+\right)
+\, 
+\left(
+\begin{array}{c}
+\psi\\u\\\hat{u}
+\end{array}
+\right)
+\, = \,
+\left(
+\begin{array}{c}
+l \\0 \\0
+\end{array}
+\right)\, ,
+\]
+becomes a standard Bubnov--Galerkin problem:
+\[
+\left(
+\begin{array}{cc}
+B^* G^{-1} B & B^* G^{-1} \hat{B} \\
+\hat{B}^* G^{-1} B^* & \hat{B}^* G^{-1} \hat{B}^*
+\end{array}
+\right)
+\, 
+\left(
+\begin{array}{c}
+u\\\hat{u}
+\end{array}
+\right)
+\, = \,
+\left(
+\begin{array}{c}
+B^* G^{-1}  l \\\hat{B}^* G^{-1} l
+\end{array}
+\right)\, .
+\]
+
+Recall that the trace unknown $\hat u$ is discretized in \hp3D by using element-wise restrictions of $H^1$-, $H(\tcurl)$-, and $H(\tdiv)$-conforming elements. This is accomplished by first defining a standard $H^1$, $H(\tcurl)$, or $H(\tdiv)$ physics variable in the \file{physics} input file and then declaring it a trace via the global flag array \var{PHYSAi(:)}. For more information on the traces, see Section~\ref{sec:traces}.
+
+\paragraph{Constructing the DPG linear system.}
+In practice, the local element matrices of the DPG linear system can be constructed in the following way:
+
+First, reduce the broken mixed formulation to a matrix equation:
+\begin{itemize}
+\item{
+Let $\mf{U}_h = \{ \mf{u}_i \}_{i=1}^N,\ \mf{\hat U}_h = \{ \mf{\hat u}_i \}_{i=1}^{\hat N}$, and $\mf{V}^r = \{ \mf{v}_i \}_{i=1}^M$ (where $M > N+\hat N$) denote bases for the discrete trial space $\trial_h \times \hat \trial_h$ and the enriched test space $V^r$, respectively.}
+\item{
+Define the stiffness matrix for the modified bilinear form, the Gram matrix, and the load vector:
+\[
+	\mr{B}_{ij} = b(\mf{u}_j, \mf{v}_i), \quad 
+	\mr{\hat B}_{ij} = \lb \mf{\hat u}_j, \mf{v}_i \rb, \quad 
+	\mr{G}_{ij} = (\mf{v}_j, \mf{v}_i)_V, \quad 
+	\mr l_i = l(\mf{v}_i) .
+\]
+}
+\item{
+In matrix form, the problem can now be formulated in the following way:
+
+Find the set of coefficients (over field $\bb{F} = \bb{R}$ (or $\bb{C}$))
+\[
+	\mr w = [\mr{w}_i]_{i=1}^N \in \bb{F}^N, \quad
+	\mr{\hat w} \in [\mr{\hat w}_i]_{i=1}^{\hat N} \in \bb{F}^{\hat N}, \text{ and }\
+	\mr{q} = [\mr{q}_i]_{i=1}^M \in \bb{F}^M
+\]
+such that
+\[
+	\mr {u_h} = \sum_{i=1}^{N} \mr{w}_i \mf{u}_i , \quad
+	\mr{\hat{u}_h} = \sum_{i=1}^{\hat N} \mr{\hat w}_i \mf{\hat u}_i , \text{ and }\
+	\mr{\Psi} = \sum_{i=1}^{M} \mr{q}_i \mf{v}_i
+\]
+satisfy
+\[
+	\left[ \begin{array}{ccc}
+		\mr G & \ \mr B \ \ & \mr{\hat B} \\
+		\mr B^* & \ \mr 0 \ \ & \mr 0\\
+		\mr{\hat B^*} & \ \mr 0 \ \ & \mr 0
+	\end{array} \right]
+	\left[ \begin{array}{c}
+		\mr{\Psi} \\
+		\mr{u_h} \\
+		\mr{\hat u_h}
+	\end{array} \right]
+	=
+	\left[ \begin{array}{c}
+		\mr l \\
+		\mr 0 \\
+		\mr 0
+	\end{array} \right] .
+\]
+}
+\end{itemize}
+
+Let $\mr{B} := [\mr{B}\ \mr{\hat B}]$. Then, \vskip -30pt
+\begin{align*}
+	\mr{B^*} \mr{G^{-1}} \mr{B} &= 
+	\mr{B^*} \mr{(L L^*)^{-1}} \mr{B} =
+	( \mr{L^{-1}} \mr{B} )^* \overbrace{( \mr{L^{-1}} \mr{B} )}^{\mr{\tilde B}} =
+	\mr{\tilde B}^* \mr{\tilde B} \, ,
+	\\[3pt]
+	\mr{B^*} \mr{G^{-1}} \mr{l} &=
+	( \mr{L^{-1}} \mr{B} )^* ( \mr{L^{-1} l} ) =
+	\mr{\tilde B}^* ( \mr{L^{-1} l} ) \, .
+\end{align*}
+That is, the statically condensed DPG linear system is computed as follows:
+\begin{enumerate}
+	\itemsep 0pt
+	\item Cholesky factorization: \hskip 7pt 
+	$\mr{G = L L^*}$
+	\item Solve triangular system: \hskip 2pt 
+	$\mr{[\tilde B \, | \, \tilde l \,] = L^{-1} [B \, | \, l \,]}$
+	\item Matrix multiply: \hskip 37pt 
+	$\mr{\tilde B^* [\tilde B \, | \, \tilde l \,]}$
+\end{enumerate}
+The \routine{elem} routine concludes by storing this statically condensed system into the corresponding blocks of the assembly arrays \var{ALOC} and \var{BLOC} (cf.~\ref{sec:coupled-variables}).
+
+%\input{Chapters/APPENDIX_B_APPLICATIONS/comments}
+
+

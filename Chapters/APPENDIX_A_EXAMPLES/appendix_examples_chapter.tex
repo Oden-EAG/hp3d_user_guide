@@ -63,6 +63,7 @@ Next, we take a look at the required routines that must be provided by the user:
 	{\routine{set\_initial\_mesh}:\\
 	for \emph{each} initial mesh element, this routine sets
 	\begin{itemize}
+		\itemsep 0pt
 		\item the supported physics variables;
 		\item the initial polynomial order of approximation;
 		\item the boundary condition flags for element faces on the boundary.
@@ -93,7 +94,8 @@ Next, we take a look at the required routines that must be provided by the user:
          end select
       enddo
 
-!  ...allocate BC flags (one per component), and encode face BCs into a single BC flag
+!  ...allocate BC flags (one per component), 
+!     and encode face BCs into a single BC flag
       allocate(ELEMS(iel)%bcond(1))
       call encodg(ibc(1:6,1),10,6, ELEMS(iel)%bcond(1))
    enddo
@@ -201,7 +203,7 @@ Constrained approximation, modification for Dirichlet nodes, and static condensa
 This concludes the list of necessary input files and routines required for defining the application code from the library-perspective. However, the user is encouraged to take a look at the remaining files within the \file{POISSON/GALERKIN} directory which include the driver \routine{main} and a variety of auxiliary files. In a future version of the user manual, we will include a discussion of these auxiliary files as well.
 
 \subsection{DPG primal implementation}
-\label{subsec:poisson-ultraweak}
+\label{sec:poisson-primal}
 
 Broken primal DPG formulation:
 \[
@@ -214,9 +216,279 @@ Broken primal DPG formulation:
 \right.
 \]
 
-Compared to the Galerkin FE implementation, the primal DPG implementation is mostly different in the \routine{elem} routine.
+Compared to the Galerkin FE implementation, the primal DPG implementation mostly differs in the \routine{elem} routine. In practice, the DPG method is implemented in its mixed form \cite{demkowicz2017dpg} but the extra unknown---the Riesz representation of the residual---is statically condensed on the element level (see Appendix~\ref{chap:dpg}).
 
 The implementation is provided in \file{problems/POISSON/PRIMAL\_DPG}.
+
+Compared to the input files for the Galerkin implementation, the only change is in the \file{physics} file:
+\begin{lstlisting}[caption=\file{POISSON/PRIMAL\_DPG/input/physics} input file.]
+100000              MAXNODS, nodes anticipated
+2                   NR_PHYSA, physics attributes
+field   contin  1   H1 variable
+trace   normal  1   H(div) variable
+\end{lstlisting}
+We now have specified two physics unknowns---$u$ and $\hat \sigma_n$, i.e.~\code{\var{NR\_PHYSA}=2}. The additional trace unknown $\hat \sigma_n$ is declared as an $H(\tdiv)$ variable in the \file{physics} file; the normal trace $\hat \sigma_n$ must later be specified as such by setting \code{\var{PHYSAi(2)}=.true.} (e.g.~in the \routine{main} driver).
+
+The \routine{elem} routine for DPG formulations can be structured into three distinct steps:
+\vskip 5pt
+
+\begin{minipage}{0.48\textwidth}
+\begin{enumerate}[leftmargin=\parindent]
+	\itemsep -10pt
+	\item Element integration \vspace{-15pt}
+	\begin{itemize}
+		\itemsep -8pt
+		\item Stiffness: $\mr B$
+		\item Load: $\mr l$
+		\item Gram matrix: $\mr G$
+	\end{itemize}
+	\item Boundary integration \vspace{-15pt}
+	\begin{itemize}
+		\itemsep -8pt
+		\item Stiffness: $\mr{\hat B}$
+	\end{itemize}
+	\item Constructing DPG linear system \vspace{-15pt}
+	\begin{itemize}
+		\itemsep -8pt
+		\item Dense linear algebra
+		\item {Statically condensed system\\[-5pt] 
+		stored in \var{ALOC}, \var{BLOC}}
+	\end{itemize}
+\end{enumerate}
+\end{minipage}%
+\begin{minipage}{0.48\textwidth}
+\begin{figure}[H]
+	\centering
+	\begin{subfigure}[b]{0.6\textwidth}
+		\includegraphics[height=1.5in]{ALOC.pdf}
+	\end{subfigure}%
+	\begin{subfigure}[b]{0.3\textwidth}
+		\includegraphics[height=1.5in]{BLOC.pdf}
+	\end{subfigure}
+	\caption*{Element-local system.}
+\end{figure}
+\end{minipage}
+
+\vskip 5pt
+\noindent
+\begin{minipage}[t]{0.60\textwidth}
+Recall the statically condensed system\\[-5pt]
+(cf.~Appendix~\ref{chap:dpg}): \vspace{-10pt}
+\[
+	\left[ \begin{array}{cc}
+		\mr{B^* G^{-1} B} & \mr{B^* G^{-1} \hat B} \\
+		\mr{\hat B^* G^{-1} B} & \mr{\hat B^* G^{-1} \hat B} \\
+	\end{array} \right]
+	\left[ \begin{array}{c}
+		\mr{u_h} \\
+		\mr{\hat u_h} 
+	\end{array} \right]
+	=
+	\left[ \begin{array}{c}
+		\mr{B^* G^{-1} l} \\
+		\mr{\hat B^* G^{-1} l}
+	\end{array} \right]
+\]
+\end{minipage}
+\begin{minipage}[t]{0.39\textwidth}
+Auxiliary local variables: \vspace{-10pt}
+\begin{itemize}
+	\itemsep -8pt
+	\item \var{stiff\_HH} $\leftarrow \mr B$
+	\item \var{stiff\_HV} $\leftarrow \mr{\hat B}$
+	\item \var{bload\_H} $\leftarrow \mr l$
+	\item \var{stiff\_ALL} $\leftarrow \left[ \mr{B \, | \, \hat B \, | \, l \, } \right]$
+\end{itemize}
+\end{minipage}
+
+\vskip 5pt
+
+In the \routine{elem} routine, these steps are implemented as follows:
+\begin{enumerate}
+	\item{ Preliminary set up:
+\begin{lstlisting}[mathescape,caption=\file{POISSON/PRIMAL\_DPG/}\routine{elem}: preliminary set up]
+!..allocate auxiliary matrices
+   allocate(gramP(NrTest*(NrTest+1)/2))
+   allocate(stiff_HH(NrTest,NrdofH))
+   allocate(stiff_HV(NrTest,NrdofVi))
+
+!..determine element type; number of vertices, edges, and faces
+   etype = NODES(Mdle)%type
+   nrv = nvert(etype); nre = nedge(etype); nrf = nface(etype)
+   
+!..determine order of approximation (element integrals)
+   call find_order(Mdle, norder)
+!..determine enriched order of approximation (hexa)
+   nordP = NODES(Mdle)%order+NORD_ADD*111
+
+!..determine edge and face orientations
+   call find_orient(Mdle, norient_edge,norient_face)
+!..determine nodes coordinates
+   call nodcor(Mdle, xnod)
+!..set quadrature points and weights
+   call set_3D_int(etype,norder,norient_face, nrint,xiloc,waloc)
+   
+!  ....... element integrals
+\end{lstlisting}
+	}
+	\item{ Element integration:
+\begin{lstlisting}[mathescape,caption=\file{POISSON/PRIMAL\_DPG/}\routine{elem}: element integration]
+!..use the enriched order to set the quadrature
+   INTEGRATION = NORD_ADD ! $\Delta p \in \{1, 2, \ldots \}$
+   call set_3D_int_DPG(etype,norder,norient_face, nint,xiloc,waloc)
+
+!..loop over integration points
+   do l=1,nint
+!  ...coordinates and weight of this integration point
+      xi(1:3)=xiloc(1:3,l); wa=waloc(l)
+
+!  ...H1 shape functions (for geometry)
+      call shape3DH(etype,xi,norder,norient_edge,norient_face, nrdofH,shapH,gradH)
+!  ...discontinuous H1 shape functions
+      call shape3HH(etype,xi,nordP, nrdof,shapHH,gradHH)
+
+!  ...geometry map
+      call geom3D(Mdle,xi,xnod,shapH,gradH,nrdofH, x,dxdxi,dxidx,rjac,iflag)
+!  ...integration weight
+      weight = rjac*wa
+!  ...get the RHS
+      call getf(Mdle,x, fval)
+
+!  ...1st loop through enriched H1 test functions
+      do k1=1,nrdofHH
+!     ...Piola transformation
+         v = shapHH(k1)
+         dv(1:3) = gradHH(1,k1)*dxidx(1,1:3) + gradHH(2,k1)*dxidx(2,1:3) + gradHH(3,k1)*dxidx(3,1:3)
+!
+!     ...accumulate load: $(f,v)$
+         bload_H(k1) = bload_H(k1) + fval*v*weight
+!
+!     ...loop through H1 trial functions
+         do k2=1,nrdofH
+!        ...Piola transformation
+            dp(1:3) = gradH(1,k2)*dxidx(1,1:3) + gradH(2,k2)*dxidx(2,1:3) + gradH(3,k2)*dxidx(3,1:3)
+!
+!        ...accumulate stiffness: $(\nabla u, \nabla_h v)$
+            stiff_HH(k1,k2) = stiff_HH(k1,k2) + weight*(dv(1)*dp(1) + dv(2)*dp(2) + dv(3)*dp(3))
+         enddo
+
+!     ...2nd loop through enriched H1 test functions for Gram matrix
+         do k2=k1,nrdofHH
+!        ...Piola transformation
+            q = shapHH(k2)
+            dq(1:3) = gradHH(1,k2)*dxidx(1,1:3) + gradHH(2,k2)*dxidx(2,1:3) + gradHH(3,k2)*dxidx(3,1:3)
+
+!        ...determine index in triangular packed format
+            k = (k2-1)*k2/2+k1
+!
+!        ...accumulate Gram with test inner product: $(v,v)_\test := (v,v) + (\nabla_h v, \nabla_h v)$
+            aux = q*v + (dq(1)*dv(1) + dq(2)*dv(2) + dq(3)*dv(3))
+            gramP(k) = gramP(k) + aux*weight
+         enddo; enddo; enddo
+\end{lstlisting}
+	}
+	\item{ Boundary integration:
+\begin{lstlisting}[mathescape,caption=\file{POISSON/PRIMAL\_DPG/}\routine{elem}: boundary integration.]
+!..determine order of approximation (boundary integrals)
+   norderi(1:nre+nrf) = norder(1:nre+nrf)
+   norderi(nre+nrf+1) = 111
+
+!..loop through element faces
+   do ifc=1,nrf
+
+!  ...sign factor to determine the outward normal unit vector
+      nsign = nsign_param(etype,ifc)
+
+!  ...face type ('tria','quad')
+      ftype = face_type(etype,ifc)
+
+!  ...face order of approximation
+      call face_order(etype,ifc,norder, norderf)
+
+!  ...set 2D quadrature
+      INTEGRATION = NORD_ADD ! $\Delta p$
+      call set_2D_int_DPG(ftype,norderf,norient_face(ifc), nint,tloc,wtloc)
+
+!  ...loop through integration points
+      do l=1,nint
+
+!     ...face coordinates
+         t(1:2) = tloc(1:2,l)
+!     ...face parametrization
+         call face_param(etype,ifc,t, xi,dxidt)
+
+!     ...determine discontinuous H1 shape functions
+         call shape3HH(etype,xi,nordP, nrdof,shapHH,gradHH)
+!     ...determine element H(div) shape functions (for fluxes), interfaces only (no bubbles)
+         call shape3DV(etype,xi,norderi,norient_face, nrdof,shapV,divV)
+
+!     ...determine element H1 shape functions (for geometry)
+         call shape3DH(etype,xi,norder,norient_edge,norient_face, nrdof,shapH,gradH)
+!     ...geometry map
+         call bgeom3D(Mdle,xi,xnod,shapH,gradH,nrdofH,dxidt,nsign, x,dxdxi,dxidx,rjac,dxdt,rn,bjac)
+!     ...integration weight
+         weight = bjac*wtloc(l)
+
+!     ...loop through enriched H1 test functions
+         do k1=1,nrdofHH
+            v = shapHH(k1)
+
+!        ...loop through H(div) trial functions
+            do k2=1,nrdofVi
+!           ...Piola transformation
+               s(1:3) = (dxdxi(1:3,1)*shapV(1,k2)+dxdxi(1:3,2)*shapV(2,k2)+dxdxi(1:3,3)*shapV(3,k2))
+               s(1:3) = s(1:3) / rjac
+!           ...normal component
+               sn = s(1)*rn(1)+s(2)*rn(2)+s(3)*rn(3)
+!
+!           ...accumulate stiffness: $-\lb \sigma \cdot n, v \rb_{\Gamma_h}$
+               stiff_HV(k1,k2) = stiff_HV(k1,k2) - sn*v*weight
+
+            enddo; enddo ! end loop through trial / test functions
+   enddo; enddo; ! end loop through integration points / faces
+\end{lstlisting}
+	}
+	\item{ Construction of DPG linear system:
+\begin{lstlisting}[mathescape,caption=\file{POISSON/PRIMAL\_DPG/}\routine{elem}: constructing DPG linear system.]
+!---------------------------------------------------------------------
+!  Construction of statically condensed DPG linear system
+!---------------------------------------------------------------------
+
+!..create auxiliary matrix for dense linear algebra
+   allocate(stiff_ALL(NrTest,NrTrial+1))
+
+!..Total test/trial DOFs of the element
+   i = NrTest ; j1 = NrdofH ; j2 = NrdofVi
+
+!..Copy stiffness and load into one matrix: $\text{\var{stiff\_ALL}} \leftarrow [ \mr{B \, | \, \hat B \, | \, l \, } ]$
+   stiff_ALL(1:i,1:j1)          = stiff_HH(1:i,1:j1)
+   stiff_ALL(1:i,j1+1:j1+j2) = stiff_HV(1:i,1:j2)
+   stiff_ALL(1:i,j1+j2+1)       = bload_H(1:i)
+
+   deallocate(stiff_HH,stiff_HV)
+
+!..A. Compute Cholesky factorization of Gram Matrix, $\mr{G=U^T U \, (=LL^T)}$
+   call DPPTRF('U',NrTest,gramP,info)
+!
+!..B. Solve triangular system to obtain $\mr{\tilde B,\ \text{i.e.~solve } (L \tilde B=)\, U^T \tilde B = [B \, | \, l]}$
+   call DTPTRS('U','T','N',NrTest,NrTrial+1,gramP,stiff_ALL,NrTest,info)
+
+   allocate(raloc(NrTrial+1,NrTrial+1)); raloc = ZERO
+
+!..C. Matrix multiply: $\mr{B^T G^{-1} B \, (=\tilde B^T \tilde B)}$
+   call DSYRK('U','T',NrTrial+1,NrTest,ZONE,stiff_ALL,NrTest,ZERO,raloc,NrTrial+1)
+
+!..D. Fill lower triangular part of Hermitian matrix $\mr{\tilde B^T \tilde B}$
+   do i=1,NrTrial
+      raloc(i+1:NrTrial+1,i) = raloc(i,i+1:NrTrial+1)
+   enddo
+
+!..raloc has now all blocks of the stiffness and load:
+!  $r_{\text{aloc}} = \var{ALOC(1,1)} \quad \var{ALOC(1,2)} \quad \var{BLOC(1)}$
+          $\, \var{ALOC(2,1)} \quad \var{ALOC(2,2)} \quad \var{BLOC(2)}$
+\end{lstlisting}
+	}
+\end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Linear Elasticity Problems}
