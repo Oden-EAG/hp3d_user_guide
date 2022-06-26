@@ -30,7 +30,7 @@ Classical variational formulation:
 \subsection{Galerkin implementation}
 \label{subsec:poisson-galerkin}
 
-The Galerkin FE implementation of the problem is located in the application directory \file{problems/POISSON/GALERKIN}. In the remainder of this section, file paths may be given as relative paths within the application directory.
+The Galerkin FE implementation of the variational problem is located in the application directory \file{problems/POISSON/GALERKIN}. In the remainder of this section, file paths may be given as relative paths within the application directory.
 
 Input files:
 \begin{itemize}
@@ -314,6 +314,7 @@ In the \routine{elem} routine, these steps are implemented as follows:
    allocate(gramP(NrTest*(NrTest+1)/2))
    allocate(stiff_HH(NrTest,NrdofH))
    allocate(stiff_HV(NrTest,NrdofVi))
+   allocate(bload_H(NrTest))
 
 !..determine element type; number of vertices, edges, and faces
    etype = NODES(Mdle)%type
@@ -328,8 +329,6 @@ In the \routine{elem} routine, these steps are implemented as follows:
    call find_orient(Mdle, norient_edge,norient_face)
 !..determine nodes coordinates
    call nodcor(Mdle, xnod)
-!..set quadrature points and weights
-   call set_3D_int(etype,norder,norient_face, nrint,xiloc,waloc)
    
 !  ....... element integrals
 \end{lstlisting}
@@ -338,10 +337,10 @@ In the \routine{elem} routine, these steps are implemented as follows:
 \begin{lstlisting}[mathescape,caption=\file{POISSON/PRIMAL\_DPG/}\routine{elem}: element integration]
 !..use the enriched order to set the quadrature
    INTEGRATION = NORD_ADD ! $\Delta p \in \{1, 2, \ldots \}$
-   call set_3D_int_DPG(etype,norder,norient_face, nint,xiloc,waloc)
+   call set_3D_int_DPG(etype,norder,norient_face, nrint,xiloc,waloc)
 
 !..loop over integration points
-   do l=1,nint
+   do l=1,nrint
 !  ...coordinates and weight of this integration point
       xi(1:3)=xiloc(1:3,l); wa=waloc(l)
 
@@ -416,10 +415,10 @@ In the \routine{elem} routine, these steps are implemented as follows:
 
 !  ...set 2D quadrature
       INTEGRATION = NORD_ADD ! $\Delta p$
-      call set_2D_int_DPG(ftype,norderf,norient_face(ifc), nint,tloc,wtloc)
+      call set_2D_int_DPG(ftype,norderf,norient_face(ifc), nrint,tloc,wtloc)
 
 !  ...loop through integration points
-      do l=1,nint
+      do l=1,nrint
 
 !     ...face coordinates
          t(1:2) = tloc(1:2,l)

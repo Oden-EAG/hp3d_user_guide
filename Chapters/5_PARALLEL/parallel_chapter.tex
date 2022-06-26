@@ -230,7 +230,7 @@ There are numerous of ways of realizing a parallel driver for \hp3D applications
 	A production job passes all of the program arguments needed for execution during the program call. Pre-processing, mesh refinements, adaptive solutions, and post-processing operations are all driven by a pre-defined job script. This mode is suitable for any number of MPI processes and MPI/OpenMP configuration, including large-scale execution on many compute nodes.
 \end{itemize}
 
-As an example, we refer to the driver file \file{main.F90} of the Galerkin Poisson implementation in \file{problems/POISSON/GALERKIN/}. In this driver implementation, a program argument ``\code{-job \var{JOB}}'' controls whether the program is executed in the interactive mode (\code{\var{JOB}.eq.0}) or production mode (\code{\var{JOB}.ne.0}). In production mode, the value of \var{JOB} may then define which one of a number of pre-defined job scripts should be executed. 
+As an example, we refer to the driver file \file{main.F90} of the Galerkin Poisson implementation in \file{problems/POISSON/GALERKIN}. In this driver implementation, a program argument ``\code{-job \var{JOB}}'' controls whether the program is executed in the interactive mode (\code{\var{JOB}.eq.0}) or production mode (\code{\var{JOB}.ne.0}). In production mode, the value of \var{JOB} may then define which one of a number of pre-defined job scripts should be executed. 
 
 The remainder of this section is concerned with the implementation of the so-called \emph{master--worker paradigm} for the interactive mode of \hp3D applications in the parallel distributed-memory setting.
 
