@@ -63,7 +63,7 @@ In the greedy strategy, a maximum element error indicator \var{error\_max} is fi
 
 In D\"orfler's strategy \cite{dorfler1996marking}, the elements are first organized in the order of descending element error indicators and the total error \var{error\_glob} is computed by summing up the element error indicators. The first $n$ elements whose cumulative sum exceeds a certain percentage of the total error are then marked for refinement, i.e.:
 \[
-\sum_{j=1}^n \var{elem\_error}_j > \var{perc} * \var{error\_glob} .
+	\sum_{j=1}^n \var{elem\_error}_j > \var{perc} * \var{error\_glob} .
 \]
 Marked elements are placed on a separate list along with the requested refinement flags.
 
@@ -73,7 +73,7 @@ Marked elements are placed on a separate list along with the requested refinemen
 This section gives an overview of the $hp$-adaptive capabilities of the \hp3D code. Note that the section does \emph{not} discuss the implementation of an error indicator function for guiding mesh adaptivity, but rather introduces the mechanism of executing the adaptive refinements. It is assumed that some error indicator function, usually problem-dependent, is provided by the user. 
 % Maybe mention the DPG error indicator and examples where it's used
 
-The starting point for adaptive refiements is an array \var{elem\_ref(:)} of size \var{nr\_elem\_ref} storing a list the middle node numbers (\var{mdle}) corresponding to elements marked for refinement. 
+The starting point for adaptive refiements is an array \var{elem\_ref(:)} of size \var{nr\_elem\_ref} storing a list of the middle node numbers (\var{mdle}) corresponding to elements marked for refinement.
 
 \paragraph{$h$-adaptivity.}
 In the first example, we show how $h$-adaptive refinements are executed. In essence, each middle node is refined one-by-one by calling the \routine{refine} routine with a corresponding refinement flag \var{kref} encoding the type of $h$-refinement. For middle nodes that can be anisotropically refined, \var{kref} encodes how to refine the corresponding element. Encoding of refinement flags depends upon the element type; for instance,
