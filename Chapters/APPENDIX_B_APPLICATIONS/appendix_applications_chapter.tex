@@ -9,6 +9,7 @@
 
 To provide further examples and give the reader an idea of the scope of computations \hp3D is suitable for, this chapter briefly summarizes applications that have been implemented within the current version of the \hp3D finite element code. If an implementation is available in the public repository, we provide a file path for the interested user. References for further reading are provided in all cases.
 
+%--------------------------------------------------------------------
 \section{Optical Fiber Amplifier}
 \label{sec:laser}
 
@@ -16,6 +17,7 @@ Fiber amplifiers are optical waveguides made of silica glass designed for power-
 
 In addition to the coupled multiphysics formulation, the application employs a high-order discretization and anisotropic adaptive refinements \cite{henneking2021pollution} for a hybrid mesh consisting of both prismatic and hexahedral elements with curvilinear geometry. The application also served as the first real testbed problem for large-scale computation with the MPI/OpenMP parallel \hp3D code, successfully scaling up to thousands of wavelengths and $\sim$1B degrees of freedom \cite{henneking2021phd,henneking2022parallel}. The DPG FE implementation of the Maxwell equations also features fast integration routines via sum factorization for both hexahedral and prismatic elements \cite{mora2019fast,badger2020fast}.
 
+%--------------------------------------------------------------------
 \section{Adaptive Solution of High-Frequency Acoustic and Electromagnetic Scattering}
 \label{sec:adaptive}
 
@@ -23,30 +25,36 @@ Accurate and efficient numerical simulations of wave propagation phenomena are v
 
 This work implemented a novel multigrid solver within \hp3D for linear systems arising from DPG discretizations with a special focus in acoustic and electromagnetic wave propagation problems. The construction is heavily based on the attractive properties of the DPG method, but also on well-established theory of Schwarz domain decomposition and multigrid methods. As it is showcased in \cite{petrides2019phd,petrides2021adaptive,petrides2017adaptive}, the method is stable and reliable, and it is suitable for adaptive $hp$-meshes. The solver works hand-in-glove with the built-in DPG error indicator to drive adaptive mesh refinements. Integrating the iterative solver with the adaptive refinement procedure enables efficient and accurate solutions to challenging problems in the high-frequency regime. A distributed parallel version of the DPG multigrid solver is currently under development and will be discussed in a future version of the user manual; the technology is also described detail in \cite{hpbook3}.
 
-%Scattering of high-frequency acoustic (Helmholtz) and electromagnetic (Maxwell) beams.
-%This work implemented PML techniques for both Helmholtz and Maxwell problems described in \cite{astaneh2018pml}.
-
-\section{Elastic Cylinder}
+%--------------------------------------------------------------------
+\section{Linear Elasticity with Two Materials}
 \label{sec:hose}
 
-By Brendan Keith.
+Linear elasticity is a continuum model of the deformation and stresses of solids. The first finite element methods were developed to predict the effects of loads on structures modeled with linear elasticity and the study of linearly elastic materials has continued to be an important application of finite element analysis to this day. A finite element method for linear elasticity is available in the \file{problems/HOSE} directory.
 
+The implementation employs distinct DPG methods (primal and ultraweak \cite{keith2016elasticity}) for two separate subdomains in curvilinear body. The primal DPG method is used in a subdomain with compressible material (steel) and the ultraweak DPG method is used in a subdomain with incompressible material (rubber) \cite{fuentes2017coupled}. The coupling between the two methods is naturally incorporated through the common trace and flux dofs on the element boundary. This application demonstrates support in hp3D for subdomain-dependent local element assembly, which can be used to support the solution of multiphysics problems.
+
+%--------------------------------------------------------------------
 \section{Nonlinear Elasticity}
 \label{sec:nonlinear-elasticity}
 
-By Jaime D.~Mora.
+Beyond linear elasticity problems, it is common in computational mechanics to model and simulate nonlinear elasticity cases, e.g.~to compute large deformations. In such cases, one needs to account for a non-convex stored energy functional that must be minimized. A practical approach for solving this minimization problem is to apply loads in incremental steps to find successive local minima via Newton--Raphson methods. Each iteration of the Newton--Raphson method applied to the system of nonlinear equations solves a linear system that is derived from a variational formulation of the linearized boundary value problem (see \cite{mora2020polydpg}, Chapters 6 and 7). 
 
+The implementation of the nonlinear elasticity problem in \hp3D assumes an isotropic hyperelastic material with dead load undergoing quasi-static deformation. Various variational formulations of the linearized equations can be employed for this scenario and numerically solved in \hp3D with user-defined convergence tolerances. The application directory, \file{problems/NONLINEAR\_ELASTICITY}, includes several implementations: the Bubnov--Galerkin discretization of the classical variational formulation in \file{GALERKIN}; the DPG discretization of the broken primal formulation in \file{DPG\_PRIMAL}; and the DPG discretization of the broken ultraweak formulation in \file{DPG\_UW}. The mathematical theory and material constitutive models are detailed in \cite{mora2020polydpg}. A more thorough description of the implementation for this problem is presented in  \cite{hpbook3}. Results of multiple nonlinear elasticity examples using \hp3D are presented in \cite{hpbook3,mora2022polyhedral}.
+
+%--------------------------------------------------------------------
 \section{Thermo-Viscoelasticity}
 \label{sec:visco-elasticity}
 
 Modeling of insulators in high-energy density electric motors (thermo-viscoelasticity),\\
 by Federico Fuentes.
 
+%--------------------------------------------------------------------
 \section{Acoustics of the Human Head}
 \label{sec:human-head}
 
 ...
 
+%--------------------------------------------------------------------
 \section{EM Coupled with Thermal Effects in the Human Head}
 \label{sec:human-head}
 
