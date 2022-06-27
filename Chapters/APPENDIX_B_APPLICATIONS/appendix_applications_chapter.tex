@@ -42,11 +42,12 @@ Beyond linear elasticity problems, it is common in computational mechanics to mo
 The implementation of the nonlinear elasticity problem in \hp3D assumes an isotropic hyperelastic material with dead load undergoing quasi-static deformation. Various variational formulations of the linearized equations can be employed for this scenario and numerically solved in \hp3D with user-defined convergence tolerances. The application directory, \file{problems/NONLINEAR\_ELASTICITY}, includes several implementations: the Bubnov--Galerkin discretization of the classical variational formulation in \file{GALERKIN}; the DPG discretization of the broken primal formulation in \file{DPG\_PRIMAL}; and the DPG discretization of the broken ultraweak formulation in \file{DPG\_UW}. The mathematical theory and material constitutive models are detailed in \cite{mora2020polydpg}. A more thorough description of the implementation for this problem is presented in  \cite{hpbook3}. Results of multiple nonlinear elasticity examples using \hp3D are presented in \cite{hpbook3,mora2022polyhedral}.
 
 %--------------------------------------------------------------------
-\section{Thermo-Viscoelasticity}
+\section{Time-Harmonic Applications in Linear Viscoelasticity}
 \label{sec:visco-elasticity}
 
-Modeling of insulators in high-energy density electric motors (thermo-viscoelasticity),\\
-by Federico Fuentes.
+The linearized equations describing the dynamics of viscoelastic material behavior in the time-harmonic regime are very similar to those of time-harmonic linear elasticity. The difference is that the material properties themselves (as well as the relevant unknowns) are complex-valued. The reason is that the (linearized) consitutive model describing the relationship between stress and strain depends on the strain history, and is given by a Volterra-type convolution, which becomes a product in the time-harmonic regime. This allows to model real-life experiments in dynamic mechanical analysis (DMA) as well as phenomena that involve low-amplitude vibrations of viscoelastic material at different frequencies.
+
+An example where \hp3D was used includes the faithful reproduction of a DMA experiment involving a thin beam. Here support for complex variables is needed, as well as anisotropic $p$ and local anisotropic refinements in $h$ when the domain is discretized with hexahedra. The reason is that adaptivity is localized in certain regions where most of the deformation gradient is concentrated due to nontrivial clamping effects \cite{fuentes2017viscoelasticity}. Moreover, in an application involving form-wound stator coils found in electric machinery, it is necessary to introduce a nontrivial ``surface'' forcing coming from high-frequency Lorentz forces. This type of forcing is not typically supported. However, with the proper variational formulation and boundary conditions, it is possible to use \hp3D to solve this problem, which also includes some of the features mentioned previously \cite{fuentes2018phd}.
 
 %--------------------------------------------------------------------
 \section{Acoustics of the Human Head}
