@@ -45,7 +45,7 @@ The implementation of the nonlinear elasticity problem in \hp3D assumes an isotr
 \section{Time-Harmonic Applications in Linear Viscoelasticity}
 \label{sec:visco-elasticity}
 
-The linearized equations describing the dynamics of viscoelastic material behavior in the time-harmonic regime are very similar to those of time-harmonic linear elasticity. The difference is that the material properties themselves (as well as the relevant unknowns) are complex-valued. The reason is that the (linearized) consitutive model describing the relationship between stress and strain depends on the strain history, and is given by a Volterra-type convolution, which becomes a product in the time-harmonic regime. This allows to model real-life experiments in dynamic mechanical analysis (DMA) as well as phenomena that involve low-amplitude vibrations of viscoelastic material at different frequencies.
+The linearized equations describing the dynamics of viscoelastic material behavior in the time-harmonic regime are very similar to those of time-harmonic linear elasticity. The difference is that the material properties themselves (as well as the relevant unknowns) are complex-valued. The reason is that the (linearized) constitutive model describing the relationship between stress and strain depends on the strain history, and is given by a Volterra-type convolution, which becomes a product in the time-harmonic regime. This allows to model real-life experiments in dynamic mechanical analysis (DMA) as well as phenomena that involve low-amplitude vibrations of viscoelastic material at different frequencies.
 
 An example where \hp3D was used includes the faithful reproduction of a DMA experiment involving a thin beam. Here support for complex variables is needed, as well as anisotropic $p$ and local anisotropic refinements in $h$ when the domain is discretized with hexahedra. The reason is that adaptivity is localized in certain regions where most of the deformation gradient is concentrated due to nontrivial clamping effects \cite{fuentes2017viscoelasticity}. Moreover, in an application involving form-wound stator coils found in electric machinery, it is necessary to introduce a nontrivial ``surface'' forcing coming from high-frequency Lorentz forces. This type of forcing is not typically supported. However, with the proper variational formulation and boundary conditions, it is possible to use \hp3D to solve this problem, which also includes some of the features mentioned previously \cite{fuentes2018phd}.
 
@@ -53,14 +53,24 @@ An example where \hp3D was used includes the faithful reproduction of a DMA expe
 \section{Acoustics of the Human Head}
 \label{sec:human-head}
 
-...
+The problem was formulated and solved in the course of the dissertation of Paolo Gatto devoted to the analysis of transmission of sound in the human head \cite{Gatto2012phd}, see also \cite{Demkowicz_Gatto_etal_11,GattoDemkowicz13}. More specifically, it studied the mechanism of transmitting exterior acoustic energy into the cochlea with the ear canal {\em blocked}. The domain of interest included the human skull modeled with a spherical shell with an inner structure representing the ear canal, a cochlea with the tympanic membrane, and a simplified model of ossicles consisting of a single elastic rod connecting the ear drum with the oval window in the cochlea. The skull was surrounded with an additional layer representing air, terminated with a PML.
+The skull, ear canal, cochlea, ossicles and the three membranes were modeled with elasticity; whereas the air, exterior and interior ear, the brain and the fluid inside of the cochlea were modeled with acoustics, a total of 16 subdomains whose geometry was represented within the GMP package. The initial tetrahedral linear geometry/mesh was obtained using NETGEN and imported into GMP where two important modifications were made. The skull and all membranes, represented initially with zero thickness interfaces, were extruded into thin-walled structures, and the triangular mesh representing the skull was extruded into two additional layers for air and PML. The extrusions brought in both prismatic and pyramidal elements which motivated adding these elements to the \hp3D code.
+
+In the elastic subdomains, the code supported the elastic displacement field---a single $H^1$ field with three components. In the acoustical subdomains, the code supported the pressure---a single-component $H^1$ field. Note that the nodes located on acoustic/elastic interfaces supported both variables. More precisely, in the external acoustic domain the acoustic variable represented the scattered pressure, and in the internal acoustical domains the total pressure. The forcing came from a plane wave impinging on the skull, resulting with an additional term on the exterior acoustics/elasticity interface. A standard variational formulation (see e.g.~\cite{hpbook2}) was used with couplings between the elasticity and acoustic problems enforced weakly by incorporating interface integrals in the variational formulation. 
+%It is worth mentioning that the (asymptotic) discrete stability of the problem is guaranteed by the Mikhlin theory \cite{demkowicz2020fem}.
+The problem was discretized with the standard Galerkin method. In the initial mesh, the three membranes were discretized with quintic elements to avoid locking, with the rest of the domain covered with quadratic elements except for the PML subdomain where higher order anisotropic elements were used. Original shape functions for $H^1$-conforming elements of all shapes were developed in \cite{GattoDemkowicz10}. Finally, the problem was solved using $h$-adaptivity driven by a problem-dependent, implicit a-posteriori error estimate developed in the course of the project.
 
 %--------------------------------------------------------------------
-\section{EM Coupled with Thermal Effects in the Human Head}
-\label{sec:human-head}
+\section{Finite Element Modeling of Electromagnetic Radiation and Induced Heat Transfer in the Human Body}
+\label{sec:human-body}
 
-...
+The project focused on estimating heating effects in the human head from the absorption of electromagnetic (EM) waves emanating from a  cell phone; it constituted (partially) the dissertation of Kyungjoo Kim \cite{Kim2013phd}.
 
+The transient heat equation was coupled with time-harmonic Maxwell equations; the standard Galerkin method was used for both heat and Maxwell problem. The heat equation was discretized with the implicit Euler method. At each time step, the new temperature field was used to compute new (temperature-dependent) material constants for the Maxwell equations. Due to disparate time scales, the time-harmonic version of the Maxwell equations was employed. The resulting new electric field was then used to update the source in the heat equation. The iterations were continued until a steady-state was reached.
+
+The head was modeled with both simplified multilayer spherical geometry as well as a more precise (homogeneous) head model imported from COMSOL. The application was the second problem driving the original development of the current version of the \hp3D code. The Maxwell problem was discretized with $H(\tcurl)$-conforming tetrahedral and prismatic elements.
+
+\clearpage
 
 %\input{Chapters/APPENDIX_B_APPLICATIONS/comments}
 
