@@ -87,7 +87,7 @@ The library compilation is governed by the user-defined preprocessing flags \var
 \end{itemize}
 All computations in \hp3D are executed in double-precision arithmetic; that is, depending on the \var{COMPLEX} flag, variables are declared as \code{real(8)} or \code{complex(8)}, respectively. \hp3D provides a generic variable declaration \var{VTYPE}, which may be employed by the user in the application, defaulting to either real- or complex-type depending on whether the library was compiled in real or complex mode. The user should keep in mind some external library paths may also differ depending on real- and complex-valued computation. When compiling the \hp3D library, the library path is created under either \file{hp3d/complex/} or \file{hp3d/real/}, depending on the choice of preprocessing flag \var{COMPLEX}.
 
-Support for OpenMP threading is optional and can be enabled/disabled via preprocessing flag \var{OPENMP}. Additional preprocessing flags for enabling/disabling third-party libraries:
+Support for OpenMP threading is optional and can be enabled/disabled via preprocessing flag \var{HP3D\_USE\_OPENMP}. Additional preprocessing flags for enabling/disabling third-party libraries:
 \begin{itemize}
 	\item{\code{\var{HP3D\_USE\_INTEL\_MKL} = 0}:\\
 	Dependency on Intel MKL package is disabled.

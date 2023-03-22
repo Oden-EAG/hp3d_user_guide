@@ -170,12 +170,12 @@ The \hp3D code supports four types of elements: hexahedra, tetrahedra, prisms, a
 
 % Use lstlisting environment for code snippets
 \begin{lstlisting}[caption=Loop over element vertices., label={lst:loop_element_vertices}]
-do iv=1,Nvert(elem_type)
+do iv=1,NVERT(elem_type)
    ...
 enddo
 \end{lstlisting}
 
-\noindent where \var{elem\_type} is a member variable of an element specifying the element type---\code{`bric'}, \code{`tetr'}, \code{`pris'}, \code{`pyra'}---and \routine{Nvert(\var{elem\_type})} is a function returning the number of vertices for each element type. In this way, we avoid writing four separate versions of the code for the four types of elements but cover all four cases with just one piece of code. The user may want to review the \code{module} \module{element\_data} to learn about the existing element utilities and the underlying logic. 
+\noindent where \var{elem\_type} is a member variable of an element specifying the element type---\code{BRIC}, \code{TETR}, \code{PRIS}, \code{PYRA}---and \var{NVERT(:)} is a parameterized array (defined in \code{module} \module{node\_types}) returning the number of vertices for each element type. In this way, we avoid writing four separate versions of the code for the four types of elements but cover all four cases with just one piece of code. The user may want to review the \code{module} \module{element\_data} to learn about the existing element utilities and the underlying logic.
 
 The \module{element\_data} module starts by listing master element coordinates for the four element vertices. This defines the geometry of master elements and establishes enumeration of master element vertices. The element edges are listed next by providing numbers of the corresponding endpoint vertices. This again serves a double purpose: we enumerate the element edges and provide the corresponding local edge orientations. Finally, we list element faces by providing face-to-vertex node connectivities. This again implies the local face orientations. Finally, following the specified orientations, we provide local parametrizations for element edges and faces. All these utilities are necessary for computing element matrices. The \routine{elem} routines provided in the model problem implementations (Appendix~\ref{chap:examples}) illustrate how to use the utilities provided in the module.
 

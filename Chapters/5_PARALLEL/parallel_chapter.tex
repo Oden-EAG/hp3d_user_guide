@@ -56,7 +56,7 @@ The \module{par\_mesh} module defines two important global variables that keep t
 		\code{.true.~}~if the current mesh is distributed (DOFs are distributed across MPI processes).
 		\item Once distributed, a mesh cannot be ``undistributed.'' In other words, even if the partitioning is unbalanced (e.g., all DOFs are on one MPI process), the mesh is still distributed in the sense that each mesh element is associated with one particular subdomain (resp.\ MPI process).
 		\item Initially, \code{\var{DISTRIBUTED} = .false.}\\
-		After calling \routine{distr\_mesh}, \code{\var{DISTRIBUTED} = .true.} 
+		After calling \routine{distr\_mesh}, \code{\var{DISTRIBUTED} = .true.}; by default, \routine{distr\_mesh} is called in routine \routine{hp3gen} during mesh generation when \code{\var{NUM\_PROCS} > 1}. 
 		\item If using sequential computation (single MPI process), the value of \var{DISTRIBUTED} is irrelevant.
 	\end{itemize}
 	%
@@ -72,7 +72,7 @@ The \module{par\_mesh} module defines two important global variables that keep t
 As will be discussed in more detail in Section~\ref{sec:leveraging}, the user should be familiar with the meaning of these two variables to leverage parallel computation in \hp3D applications. In particular, using these mesh state variables greatly simplifies writing and executing an \hp3D application that supports both the sequential and distributed-memory setting.
 
 \paragraph{\var{ELEM\_ORDER} and \var{ELEM\_SUBD}.}
-The \module{data\_structure3D} module provides two arrays that are frequently used in the parallel environment. Recall from Section~\ref{sec:data-structure} that iterating over the active mesh elements is commonly done by using the \routine{nelcon} routine that provides a natural ordering of elements (see Listing~\ref{lst:loop_active_mesh_elements}). In the parallel setting, this sequential looping is replaced with a loop over one of two active mesh element arrays: \var{ELEM\_ORDER} and \var{ELEM\_SUBD}. The \var{ELEM\_ORDER} array stores all active mesh elements in their natural order; the \var{ELEM\_SUBD} array stores all active mesh elements within a particular subdomain of a distributed mesh. After each mesh refinement or mesh repartitioning, the two arrays \var{ELEM\_ORDER} and \var{ELEM\_SUBD} are automatically updated by the \routine{update\_ELEM\_ORDER} routine of the \module{data\_structure3D} module:
+The \module{data\_structure3D} module provides two arrays that are frequently used in the parallel environment. Recall from Section~\ref{sec:data-structure} that iterating over the active mesh elements is commonly done by using the \routine{nelcon} routine that provides a natural ordering of elements (see Listing~\ref{lst:loop_active_mesh_elements}). In the parallel setting, this sequential looping is replaced with a loop over one of two active mesh element arrays: \var{ELEM\_ORDER} and \var{ELEM\_SUBD}. The \var{ELEM\_ORDER} array stores all active mesh elements in their natural order; the \var{ELEM\_SUBD} array stores all active mesh elements within a particular subdomain of a distributed mesh. After each mesh refinement or mesh repartitioning, the two arrays \var{ELEM\_ORDER} and \var{ELEM\_SUBD} are automatically updated by the \routine{update\_ELEM\_ORDER} routine of the \module{par\_mesh} module:
 
 \begin{lstlisting}[caption=Updating the data structure arrays \var{ELEM\_ORDER} and \var{ELEM\_SUBD}., label={lst:update_elem_order}]
 mdle = 0; NRELES_SUBD = 0
@@ -84,6 +84,10 @@ do iel=1,NRELES
       ELEM_SUBD(NRELES_SUBD) = mdle
    endif
 enddo
+if (.not. DISTRIBUTED) then
+   ELEM_SUBD(1:NRELES) = ELEM_ORDER(1:NRELES)
+   NRELES_SUBD = NRELES
+endif
 \end{lstlisting}
 
 The total number of active mesh elements (size of \var{ELEM\_ORDER}) is denoted by \var{NRELES}, and the number of elements within the subdomain (size of \var{ELEM\_SUBD}) is denoted by \var{NRELES\_SUBD}. The \var{ELEM\_ORDER} and \var{ELEM\_SUBD} arrays are used internally for parallelizing the element loops, and they can be leveraged by the user for the same purpose as demonstrated in Section~\ref{sec:generic-element-loops}.

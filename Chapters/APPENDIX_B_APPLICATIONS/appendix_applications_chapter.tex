@@ -29,7 +29,7 @@ This work implemented a novel multigrid solver within \hp3D for linear systems a
 \section{Linear Elasticity with Two Materials}
 \label{sec:hose}
 
-Linear elasticity is a continuum model of the deformation and stresses of solids. The first finite element methods were developed to predict the effects of loads on structures modeled with linear elasticity and the study of linearly elastic materials has continued to be an important application of finite element analysis to this day. A finite element method for linear elasticity is available in the \file{problems/HOSE} directory.
+Linear elasticity is a continuum model of the deformation and stresses of solids. The first finite element methods were developed to predict the effects of loads on structures modeled with linear elasticity and the study of linearly elastic materials has continued to be an important application of finite element analysis to this day. A finite element method for linear elasticity is available in the \file{problems/SHEATHED\_HOSE} directory.
 
 The implementation employs distinct DPG methods (primal and ultraweak \cite{keith2016elasticity}) for two separate subdomains in curvilinear body. The primal DPG method is used in a subdomain with compressible material (steel) and the ultraweak DPG method is used in a subdomain with incompressible material (rubber) \cite{fuentes2017coupled}. The coupling between the two methods is naturally incorporated through the common trace and flux dofs on the element boundary. This application demonstrates support in hp3D for subdomain-dependent local element assembly, which can be used to support the solution of multiphysics problems.
 
@@ -61,7 +61,7 @@ In the elastic subdomains, the code supported the elastic displacement field---a
 The problem was discretized with the standard Galerkin method. In the initial mesh, the three membranes were discretized with quintic elements to avoid locking, with the rest of the domain covered with quadratic elements except for the PML subdomain where higher order anisotropic elements were used. Original shape functions for $H^1$-conforming elements of all shapes were developed in \cite{GattoDemkowicz10}. Finally, the problem was solved using $h$-adaptivity driven by a problem-dependent, implicit a-posteriori error estimate developed in the course of the project.
 
 %--------------------------------------------------------------------
-\section{Finite Element Modeling of Electromagnetic Radiation and Induced Heat Transfer in the Human Body}
+\section{Electromagnetic Radiation and Induced Heat Transfer in the Human Body}
 \label{sec:human-body}
 
 The project focused on estimating heating effects in the human head from the absorption of electromagnetic (EM) waves emanating from a  cell phone; it constituted (partially) the dissertation of Kyungjoo Kim \cite{Kim2013phd}.
