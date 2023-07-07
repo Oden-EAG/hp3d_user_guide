@@ -39,7 +39,7 @@ field    discon  1   L2 variable
 grad     discon  3   L2 Variable
 \end{lstlisting}
 
-In the ultraweak formulation, there are four physics unknowns: $\hat u$, $\hat{\sigma}_n$, $u$, $\bs \sigma$; i.e.~\code{\var{NR\_PHYSA}=4}. The variables are defined in the \file{physics} file and the continuous trace $\hat u$ and the normal trace $\hat \sigma_n$ are specified as such by setting \code{\var{PHYSAi(1:2)}=.true.}. The \routine{elem} can be split into three distinct steps:
+In the ultraweak formulation, there are four physics unknowns: $\hat u$, $\hat{\sigma}_n$, $u$, $\bs \sigma$; i.e.~\code{\var{NR\_PHYSA}=4}. The variables are defined in the \file{physics} file and the continuous trace $\hat u$ and the normal trace $\hat \sigma_n$ are specified as such by setting \code{\var{PHYSAi(1:2)}=.true.}. As before, the DPG \routine{elem} routine can be split into three distinct steps:
 
 \begin{minipage}{0.48\textwidth}
 \begin{enumerate}
