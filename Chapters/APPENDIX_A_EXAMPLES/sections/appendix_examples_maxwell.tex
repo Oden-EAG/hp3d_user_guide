@@ -1,0 +1,147 @@
+%
+%!TEX root = ../../../hp3D_user_guide.tex
+%
+
+%--------------------------------------------------------------------
+
+\section{Maxwell Problems}
+\label{sec:maxwell}
+
+For time-harmonic Maxwell problems, the solution is complex-valued; the \hp3D library must therefore be compiled with preprocessing flag \code{\var{COMPLEX}=1}.
+
+The general structure of the \file{MAXWELL} application directory is similar to the implementation of previously discussed applications. This section only focuses on the specific aspects of implementing particular formulations of the Maxwell problem. We encourage reading Section~\ref{sec:poisson} on Poisson problems for additional discussion of problem implementations, in general.
+
+
+\begin{itemize}
+\item
+{
+Linear time-harmonic Maxwell equations:
+\begin{alignat*}{3}
+	\curl \bs E + i \omega \mu \bs H
+	&= \bs 0 &\quad \text{in } \Omega \, , \\
+	\curl \bs H - (i \omega \eps + \sigma) \bs E 
+	&= \bs J^{\text{imp}} &\quad \text{in } \Omega \, , \\
+	\bs n \times \bs E &= \bs n \times \bs E_0 &\quad \text{on } \Gamma \, .
+\end{alignat*}
+}
+\item
+{
+Curl--curl formulation:
+\begin{alignat*}{3}
+	\curl (\mu^{-1} \curl \bs E) - (\omega^2 \eps - i \omega \sigma) \bs E
+	&= -i \omega \bs J^{\text{imp}}  &\quad \text{in } \Omega \, , \\
+	\bs n \times \bs E &= \bs n \times \bs E_0 &\quad \text{on } \Gamma \, .
+\end{alignat*}
+}
+\item
+{
+Classical variational formulation:
+\[
+\left\{
+\begin{array}{lll}
+	\bs E \in \Hcurl : \bs n \times \bs E = \bs n \times \bs E_0 \text{ on } \Gamma \, , \\[5pt]
+	(\mu^{-1} \curl \bs E,\curl \bs F) - ((\omega^2 \eps - i \omega \sigma) \bs E, \bs F)
+	= -i \omega (\bs J^{\text{imp}}, \bs F) \, , \\[5pt]
+	\hfill
+	\quad \bs F \in \Hcurl \, : \, \bs n \times \bs F = \bs 0 \text{ on } \Gamma \, .
+\end{array}
+\right.
+\]
+The formulation involves just one unknown $\bs E \in \Hcurl$, defined on the whole domain.
+}
+\end{itemize}
+
+\subsection{Galerkin implementation}
+\label{subsec:maxwell-galerkin}
+
+The Galerkin FE implementation of the classical (curl-curl) variational problem is located in the application directory \file{problems/MAXWELL/GALERKIN}. In the remainder of this section, file paths may be given as relative paths within the application directory.
+
+The physics input file defines the vector-valued unknown: electric field $\bs E \in \Hcurl$.
+\begin{lstlisting}[caption=\file{MAXWELL/GALERKIN/input/physics} input file.]
+100000              MAXNODS, nodes anticipated
+1                   NR_PHYSA, physics attributes
+field  tangen  1    H(curl) variable
+\end{lstlisting}
+
+The curl-curl formulation above specifies a non-homogeneous Dirichlet boundary condition for the tangential component of the electric field. When setting a Dirichlet flag for an $H(\tcurl)$-variable in the \routine{set\_initial\_mesh} routine, the code automatically interprets the BC to be applied to the tangential component. As in previous examples, the values of the field and its derivative on the boundary must be supplied by the user in the \routine{dirichlet} routine.
+
+The \routine{elem} routine for the Galerkin implementation of the Maxwell problem is given by the following code:
+
+\begin{lstlisting}[mathescape,caption=\file{MAXWELL/GALERKIN/}\routine{elem} routine]
+!..determine element type
+   etype = NODES(Mdle)%ntype
+   
+!..determine order of approximation
+   call find_order(Mdle, norder)
+   
+!..determine edge and face orientations
+   call find_orient(Mdle, norient_edge,norient_face)
+   
+!..determine nodes coordinates
+   call nodcor(Mdle, xnod)
+   
+!..set quadrature points and weights
+   call set_3D_int(etype,norder,norient_face, nrint,xiloc,waloc)
+
+!  ....... element integrals:
+
+!..loop over integration points
+   do l=1,nrint
+
+!  ...coordinates and weight of this integration point
+      xi(1:3) = xiloc(1:3,l); wa = waloc(l)
+
+!  ...H1 shape functions (for geometry)
+      call shape3DH(etype,xi,norder,norient_edge,norient_face, nrdofH,shapH,gradH)
+
+!  ...H(curl) shape functions
+      call shape3DE(etype,xi,norder,norient_edge,norient_face, nrdofE,shapE,curlE)
+
+!  ...geometry map
+      call geom3D(Mdle,xi,xnod,shapH,gradH,nrdofH, x,dxdxi,dxidx,rjac,iflag)
+
+!  ...integration weight
+      weight = rjac*wa
+
+!  ...get the RHS (complex, vector-valued)
+      call getf(Mdle,x, zJ)
+
+!  ...loop through H(curl) test functions
+      do k1=1,nrdofE
+
+!     ...Piola transformation: $F \rightarrow J^{-T} \hat F$ and $\curl F \rightarrow (\det J)^{-1} J \, \hat \nabla \times \hat F$
+         F(1:3) = shapE(1,k1)*dxidx(1,1:3) &
+                 + shapE(2,k1)*dxidx(2,1:3) &
+                 + shapE(3,k1)*dxidx(3,1:3)
+         CF(1:3) = ( dxdxi(1:3,1)*curlE(1,k1) &
+                    + dxdxi(1:3,2)*curlE(2,k1) &
+                    + dxdxi(1:3,3)*curlE(3,k1) ) / rjac
+
+!     ...accumulate for the load vector: $(-i \omega J,F)$
+         za = F(1)*zJ(1) + F(2)*zJ(2) + F(3)*zJ(3)
+         Zbloc(k1) = Zbloc(k1) - ZI*OMEGA*za*weight
+
+!     ...loop through H(curl) trial functions
+         do k2=1,nrdofE
+
+!        ...Piola transformation: $E \rightarrow J^{-T} \hat E$ and $\curl E \rightarrow (\det J)^{-1} J \, \hat \nabla \times \hat E$
+            E(1:3) = shapE(1,k2)*dxidx(1,1:3) &
+                    + shapE(2,k2)*dxidx(2,1:3) &
+                    + shapE(3,k2)*dxidx(3,1:3)
+            CE(1:3) = ( dxdxi(1:3,1)*curlE(1,k2) &
+                       + dxdxi(1:3,2)*curlE(2,k2) &
+                       + dxdxi(1:3,3)*curlE(3,k2) ) / rjac
+
+!        ...accumulate for the stiffness matrix: $((1/\mu) \tcurl E, \tcurl F)-((\omega^2 \eps - i \omega \sigma) E, F)$
+            za = (CE(1)*CF(1) + CE(2)*CF(2) + CE(3)*CF(3)) / MU
+            zb = (OMEGA*OMEGA*EPS - ZI*OMEGA*SIGMA) * (E(1)*F(1) + E(2)*F(2) + E(3)*F(3))
+            Zaloc(k1,k2) = Zaloc(k1,k2) + (za-zb)*weight
+
+   enddo; enddo; enddo
+\end{lstlisting}
+
+\subsection{DPG ultraweak implementation}
+\label{subsec:maxwell-galerkin}
+
+Ultraweak Maxwell will be added in a future version of the user manual.
+
