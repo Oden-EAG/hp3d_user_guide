@@ -24,8 +24,9 @@ Classical variational formulation:
 \right.
 \]
 
+%--------------------------------------------------------------------
 \subsection{Galerkin implementation}
-\label{subsec:poisson-galerkin}
+\label{sec:poisson-galerkin}
 
 The Galerkin FE implementation of the variational problem is located in the application directory \file{problems/POISSON/GALERKIN}. In the remainder of this section, file paths may be given as relative paths within the application directory.
 
@@ -203,6 +204,7 @@ Constrained approximation, modification for Dirichlet nodes, and static condensa
 
 This concludes the list of necessary input files and routines required for defining the application code from the library-perspective. However, the user is encouraged to take a look at the remaining files within the \file{POISSON/GALERKIN} directory which include the driver \routine{main} and a variety of auxiliary files. In a future version of the user manual, we may include a discussion of these auxiliary files as well.
 
+%--------------------------------------------------------------------
 \subsection{DPG primal implementation}
 \label{sec:poisson-primal}
 
@@ -217,7 +219,7 @@ Broken primal DPG formulation:
 \right.
 \]
 
-Compared to the Galerkin FE implementation, the primal DPG implementation mostly differs in the \routine{elem} routine. In practice, the DPG method is implemented in its mixed form \cite{demkowicz2017dpg} but the extra unknown---the Riesz representation of the residual---is statically condensed on the element level (see Appendix~\ref{chap:dpg}).
+Compared to the Galerkin FE implementation, the primal DPG implementation mostly differs in the \routine{elem} routine. In practice, the DPG method is implemented in its mixed form \cite{demkowicz2017dpg} but the extra unknown---the Riesz representation of the residual---is statically condensed on the element level (see Appendix~\ref{chap:dpg}). In the DPG implementation, the choice of the test norm is up to the user. This model problem employs the (broken) mathematicians norm as a test norm for the primal DPG implementation: $\| v \|^2_\test := (v,v) + (\nabla_h v, \nabla_h v)$.
 
 The implementation is provided in \file{problems/POISSON/PRIMAL\_DPG}.
 
@@ -497,5 +499,6 @@ In the \routine{elem} routine, these steps are implemented as follows:
 	}
 \end{enumerate}
 
+%--------------------------------------------------------------------
 \input{Chapters/APPENDIX_A_EXAMPLES/sections/appendix_examples_UW_poisson}
 
