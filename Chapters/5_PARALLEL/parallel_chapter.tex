@@ -46,7 +46,7 @@ The user is also encouraged to use the \routine{mpi\_w\_handle\_err(\var{Ierr}, 
 \end{itemize}
 
 \paragraph{\module{par\_mesh} module.}
-Most of the essential mesh (re-)partitioning functionality in \hp3D is provided by the module \file{src/modules/}\module{par\_mesh}. It should be emphasized again that the initial mesh is \emph{not} distributed. In other words, initially, the degrees of freedom are present on all MPI processes, i.e.~every MPI process has its own copy of the initial FE mesh. The \module{par\_mesh} module provides a \routine{distr\_mesh} routine that can be called by the user to distribute the mesh at any point, either right after initialization or after some mesh refinements. The \routine{distr\_mesh} routine also serves as a routine for repartitioning (resp.\ load balancing)---see Section~\ref{sec:load-balancing}.
+Most of the essential mesh (re-)partitioning functionality in \hp3D is provided by the module \file{src/modules/}\module{par\_mesh}. By default, the initial mesh is first generated on each process, then distributed according to the natural element order. The user can change the initial mesh partitioner via \routine{zoltan\_w\_set\_lb} in the \routine{initialize} routine before calling \routine{hp3gen} where the initial mesh data structure is generated and distributed. The \module{par\_mesh} module provides a \routine{distr\_mesh} routine that can be called by the user to (re-)distribute the mesh at any point, e.g., after mesh refinements. That is, the \routine{distr\_mesh} routine serves as a routine for repartitioning (resp.\ load balancing)---see Section~\ref{sec:load-balancing}.
 
 The \module{par\_mesh} module defines two important global variables that keep track of the current state of the mesh in the parallel environment:
 \begin{itemize}
@@ -54,7 +54,7 @@ The \module{par\_mesh} module defines two important global variables that keep t
 	\begin{itemize} \itemsep 2pt
 		\item \code{.false.}~if the current mesh is not distributed (all DOFs present on all MPI processes);\\
 		\code{.true.~}~if the current mesh is distributed (DOFs are distributed across MPI processes).
-		\item Once distributed, a mesh cannot be ``undistributed.'' In other words, even if the partitioning is unbalanced (e.g., all DOFs are on one MPI process), the mesh is still distributed in the sense that each mesh element is associated with one particular subdomain (resp.\ MPI process).
+		\item If more than one MPI process is used, the \var{DISTRIBUTED} flag should always be \code{.true.}\ after mesh initialization (once \routine{hp3gen} returns). Once distributed, a mesh cannot be ``undistributed.'' In other words, even if the partitioning is completely unbalanced (e.g., all DOFs are on one MPI process), the mesh is still distributed in the sense that each mesh element is associated with one particular subdomain (resp.\ MPI process).
 		\item Initially, \code{\var{DISTRIBUTED} = .false.}\\
 		After calling \routine{distr\_mesh}, \code{\var{DISTRIBUTED} = .true.}; by default, \routine{distr\_mesh} is called in routine \routine{hp3gen} during mesh generation when \code{\var{NUM\_PROCS} > 1}. 
 		\item If using sequential computation (single MPI process), the value of \var{DISTRIBUTED} is irrelevant.

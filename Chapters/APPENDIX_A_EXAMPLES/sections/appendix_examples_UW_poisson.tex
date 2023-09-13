@@ -6,8 +6,14 @@
 
 \subsection{DPG ultraweak implementation}
 \label{sec:poisson-ultraweak}
-Broken ultraweak formulation:
 
+The ultraweak formulation is based on the first-order system:
+\begin{align*}
+	\bs \sigma - \grad u &= \bs 0 , \\
+	- \div \bs \sigma &= f .
+\end{align*}
+
+The broken ultraweak formulation is then given by:
 \[
 \left\{
 \begin{array}{llll}
@@ -15,25 +21,30 @@ Broken ultraweak formulation:
 	\hat{\sigma}_n \in H^{-1/2}(\Gamma_h),\,
 	u \in L^2(\Omega),\,
 	\bs \sigma \in \bs{L^2}(\Omega) , \\[5pt]
-	(u, \nablah \cdot \bs \tau)
+	(\bs \sigma, \bs \tau) + (u, \nablah \cdot \bs \tau)
 	- \lb \hat u, \bs \tau \cdot \bs n \rb_{\Gamma_h}
 	+ (\bs \sigma, \nablah v)
 	- \lb \hat{\sigma}_n , v \rb_{\Gamma_h}
-	= (f,v) \, ,\quad
+	= (f,v) \, , \
 	v \in H^1(\Omega_h), 
 	\bs \tau \in H(\tdiv; \Omega_h) \, .
 \end{array}
 \right.
 \]
 
-The DPG ultraweak implementation differs from the primal DPG implementation mostly in the \routine{elem} routine. As before, the static condensation of the Riesz representation of the residual is done at the element level (cf.~Section~\ref{sec:poisson-primal}). 
+The DPG ultraweak implementation differs from the primal DPG implementation mostly in the \routine{elem} routine. As before, the static condensation of the Riesz representation of the residual is done at the element level (cf.~Section~\ref{sec:poisson-primal}). This model problem employs the adjoint graph norm as a test norm for the ultraweak DPG implementation:
+\[
+	\| (v,\bs \tau) \|^2_\test := 
+	\| \nablah v + \bs \tau \|^2 + \| \nablah \cdot \bs \tau \|^2
+	+ \| v \|^2 + \| \bs \tau \|^2 .
+\]
 
 The implementation is provided in \file{problems/POISSON/ULTRAWEAK\_DPG}.
 
 \begin{lstlisting}[caption=\file{POISSON/ULTRAWEAK\_DPG/input/physics} input file.]
-100000               MAXNODS,  nodes anticipated
+100000               MAXNODS, nodes anticipated
 4                    NR_PHYSA, physics attributes
-trace_a contin  1    H1 Variable
+trace_a contin  1    H1 variable
 trace_b normal  1    H(div) variable
 field    discon  1   L2 variable
 grad     discon  3   L2 Variable
@@ -105,7 +116,7 @@ Auxiliary local variables: \vspace{-10pt}
 The preliminary setup for the ultraweak formulation is similar to the setup of the primal DPG implementation with additional memory allocation for additional unknowns and test functions. The element integration routine for the ultraweak DPG formulation is given by the following code:
 \begin{lstlisting}[mathescape,caption=\file{POISSON/ULTRAWEAK\_DPG/}\routine{elem}: element integration]
 !..use the enriched order to set the quadrature
-   INTEGRATION = NORD_ADD ! $\triangle p \in \{1,2,....\}$
+   INTEGRATION = NORD_ADD ! $\triangle p \in \{1,2,...\}$
    call set_3D_int_DPG(etype,norder,norient_face, nrint,xiloc,waloc)
 
 !..loop over integration points
@@ -150,12 +161,11 @@ The preliminary setup for the ultraweak formulation is similar to the setup of t
          do k2=1,NrdofQ
 !..loop over components of $\sigma$
             do ivar = 1,3
-               n1 = k1
-               n2 = (k2 - 1)*3 + ivar
+               n1 = k1; n2 = (k2 - 1)*3 + ivar
                sig = ZERO
 !..Piola Transform for $\mr{{ivar}^{th}}$ L2 component of $\sigma$
                sig(ivar) = shapQ(k2) / rjac
-!..acumulate stiffness: $\mr{(\bs \sigma,\nabla v)}$
+!..accumulate stiffness: $\mr{(\bs \sigma,\nabla v)}$
                stiff_HQ2(n1,n2) = stiff_HQ2(n1,n2) + weight * &
                	                 (sig(1)*dv(1) + sig(2)*dv(2) + sig(3)*dv(3))
             enddo; enddo !..end of loop through L2 trial functions
@@ -205,8 +215,7 @@ The preliminary setup for the ultraweak formulation is similar to the setup of t
             do ivar = 1,3
                sig = ZERO
                sig(ivar) = shapQ(k2)/rjac  ! Piola transform for the $\mr{{ivar}^{th}}$ component
-               n1 = k1
-               n2 = (k2 - 1)*3 + ivar
+               n1 = k1; n2 = (k2 - 1)*3 + ivar
 !..accumulate stiffness: $\mr{(\bs \sigma,\bs \tau)}$
                stiff_VQ2(n1,n2) = stiff_VQ2(n1,n2) + weight * & 
                                   (tau_a(1)*sig(1) + tau_a(2)*sig(2) + tau_a(3)*sig(3))
@@ -216,8 +225,8 @@ The preliminary setup for the ultraweak formulation is similar to the setup of t
          do k2=k1,NrdofVV
 !..Piola transformation
             divtau_b = divVV(k2)/rjac
-            tau_b(1:3) = ( dxdxi(1:3,1) * shapVV(1,k2)      &
-                           + dxdxi(1:3,2) * shapVV(2,k2)      &
+            tau_b(1:3) = ( dxdxi(1:3,1) * shapVV(1,k2)       &
+                           + dxdxi(1:3,2) * shapVV(2,k2)     &
                            + dxdxi(1:3,3) * shapVV(3,k2) ) / rjac
 !
             k = nk(k1 + NrdofHH,k2 + NrdofHH)
@@ -245,7 +254,6 @@ Next, we provide the code performing the boundary integration:
 !..set 2D quadrature
       INTEGRATION = NORD_ADD
       call set_2D_int_DPG(ftype,norderf,norient_face(ifc), nrint,tloc,wtloc)
-      INTEGRATION = 0
 
 !..loop through integration points
       do l=1,nrint
@@ -262,16 +270,14 @@ Next, we provide the code performing the boundary integration:
          call shape3VV(etype,xi,nordP, nrdof,shapVV,divVV)
 
 !..determine element H1 shape functions (for geometry)
-         call shape3DH(etype,xi,norder,norient_edge,norient_face, &
-                       nrdof,shapH,gradH)
+         call shape3DH(etype,xi,norder,norient_edge,norient_face, nrdof,shapH,gradH)
 
 !..determine H(div) shape functions (for fluxes) on face
-         call shape3DV(etype,xi,norderi,norient_face, &
-                       nrdof,shapV,divV)
+         call shape3DV(etype,xi,norderi,norient_face, nrdof,shapV,divV)
 
 !..geometry map
          call bgeom3D(Mdle,xi,xnod,shapH,gradH,NrdofH,dxidt,nsign, &
-                  x,dxdxi,dxidx,rjac,dxdt,rn,bjac)
+                       x,dxdxi,dxidx,rjac,dxdt,rn,bjac)
 !..integration weight
          weight = bjac*wtloc(l)
 
@@ -309,9 +315,9 @@ Next, we provide the code performing the boundary integration:
          enddo !..end of loop through enriched H(div) test functions
       enddo !..end of loop through integration points
    enddo !..end of loop through element faces
-
 \end{lstlisting}
-Finally, the code performing the construction of the DPG linear system.
+
+Finally, the code performing the construction of the DPG linear system:
 \begin{lstlisting}[mathescape,caption=\file{POISSON/ULTRAWEAK\_DPG/}\routine{elem}: constructing DPG linear system.]
    allocate(stiff_ALL(NrTest,NrTrial+1))
    stiff_ALL = ZERO
@@ -331,9 +337,6 @@ Finally, the code performing the construction of the DPG linear system.
    stiff_ALL(i1+1:i1+i2,j1+j2+j3+1:j1+j2+j3+j4) = stiff_VQ2
 
    stiff_ALL(1:i1+i2,j1+j2+j3+j4+1) = bload_H
-
-   deallocate(stiff_HQ1,stiff_HQ2,stiff_HH,stiff_HV)
-   deallocate(stiff_VQ1,stiff_VQ2,stiff_VH,stiff_VV)
 
 !..A. Compute Cholesky factorization of Gram Matrix, $\mr{G=U^T U (=LL^T)}$
    call DPPTRF('U',NrTest,gramP,info)

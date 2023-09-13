@@ -140,8 +140,268 @@ The \routine{elem} routine for the Galerkin implementation of the Maxwell proble
    enddo; enddo; enddo
 \end{lstlisting}
 
+%--------------------------------------------------------------------
 \subsection{DPG ultraweak implementation}
-\label{subsec:maxwell-galerkin}
+\label{sec:maxwell-ultraweak}
 
-Ultraweak Maxwell will be added in a future version of the user manual.
+The broken ultraweak Maxwell formulation is given by:
+\[
+\left\{
+\begin{split}
+	\bs E, \bs H \in \bs{L^2}(\Omega), \hat{\bs E}, \hat{\bs H} \in H^{-1/2}(\tcurl, \Gammah): \bs n \times \bs E &= \bs n \times \bs E_0 \text{ on } \Gamma \, , \\
+	(\bs H, \hcurl \bs F) - ((i \omega \eps + \sigma) \bs E , \bs F)
+	&= (\bs J^{\text{imp}}, \bs F) &\quad \bs F \in \hHcurl \, , \\
+	(\bs E, \hcurl \bs G) + \lb \bs n \times \hat{\bs E}, \bs G \rb_{\Gammah} + (i \omega \mu \bs H, \bs G)
+	&= \bs 0 &\quad \bs G \in \hHcurl \, .
+\end{split}
+\right .
+\]
+
+Before looking at this section, the reader is encouraged to review the simpler DPG implementations of the Poisson problem, given in Sections~\ref{sec:poisson-primal} (primal) and \ref{sec:poisson-ultraweak} (ultraweak), which are discussed in greater detail. As in the Poisson DPG implementation, the static condensation of the Riesz representation of the residual is done at the element level (cf.~Section~\ref{sec:poisson-primal}). This model problem implementation uses a scaled adjoint graph norm for the ultraweak Maxwell formulation:
+\[
+	\| ( \bs F, \bs G ) \|^2_\test :=
+	\| \hcurl \bs F - i \omega \bar{\mu} \bs G \|^2 +
+	\| \hcurl \bs G + (i \omega \bar{\eps} - \sigma) \bs F \|^2 +
+	\alpha ( \| \bs F \|^2 + \| \bs G \|^2) \, ,
+\]
+where $\bar{\cdot}$ indicates complex-conjugate, and $\alpha > 0$ is a scaling constant. See, e.g., \cite{melenk2023waveguide1, demkowicz2023waveguide2}, for both theoretical considerations and practical implications in terms of stability of choosing a proper value for $\alpha$.
+
+The implementation is provided in \file{problems/MAXWELL/ULTRAWEAK\_DPG}.
+
+\begin{lstlisting}[caption=\file{MAXWELL/ULTRAWEAK\_DPG/input/physics} input file.]
+100000              MAXNODS, nodes anticipated
+2                   NR_PHYSA, physics attributes
+EHtrc   tangen 2    traces of electric/magnetic fields, H(curl), 2 components
+EHfld   discon 6    electric/magnetic fields, L2, 3+3 components
+\end{lstlisting}
+
+In the ultraweak formulation, there are four physics unknowns: $\hat{\bs E}$, $\hat{\bs H}$, $\bs E$, $\bs H$; however, since all physics variables are solved in the same formulation and the electric and magnetic fields (and their traces) each use the same respective energy spaces (namely $\bs{L^2}$ and $H^{-1/2}(\tcurl)$), one can alternatively group these variables by specifying only two physics variables with double the number of components each: $(\hat{\bs E},\hat {\bs H}) \in (H^{-1/2}(\tcurl, \Gammah))^2$ and $(\bs E, \bs H) \in (\bs{L^2}(\Omega))^2$---recall that $\bs{L^2}(\Omega) = (L^2(\Omega))^3$. The variables are defined in the \file{physics} file and the tangential traces $(\hat{\bs E},\hat {\bs H})$ are specified as such by setting \code{\var{PHYSAi(1)}=.true.}. Choosing to specify grouped physics variables in such a way has certain implications for the ordering of degrees of freedom and the allocation of element-local matrices \var{ALOC} and \var{BLOC} (see Section~\ref{sec:coupled-variables}).
+
+The element integration routine for the ultraweak DPG formulation is given by the following code:
+\begin{lstlisting}[mathescape,caption=\file{MAXWELL/ULTRAWEAK\_DPG/}\routine{elem\_maxwell}: element integration]
+!  ...use the enriched order to set the quadrature
+      INTEGRATION = NORD_ADD
+      call set_3D_int_DPG(ntype,norder,norient_face, nrint,xiloc,waloc)
+
+!  ...loop over integration points
+      do l=1,nrint
+
+!     ...coordinates and weight of this integration point
+         xi(1:3)=xiloc(1:3,l); wa=waloc(l)
+
+!     ...H1 shape functions (for geometry)
+         call shape3DH(ntype,xi,norder,norient_edge,norient_face, nrdofH,shapH,gradH)
+
+!     ...L2 shape functions for the trial space
+         call shape3DQ(ntype,xi,norder, nrdofQ,shapQ)
+
+!     ...broken H(curl) shape functions for the enriched test space
+         call shape3EE(ntype,xi,nordP, nrdofEE,shapEE,curlEE)
+
+!     ...geometry map
+         call geom3D(Mdle,xi,xnod,shapH,gradH,nrdofH, x,dxdxi,dxidx,rjac,iflag)
+
+!     ...get permittivity at x
+         call get_permittivity(mdle,x, eps)
+
+!     ...integration weight
+         weight = rjac*wa
+
+!     ...get the RHS
+         call getf(Mdle,x, zJ)
+
+!     ...permittivity
+         za = (ZI*OMEGA*EPS) * eps(:,:)
+
+!     ...scalar permeability
+         zc1 = ZI*OMEGA*MU
+
+!     ...apply pullbacks
+         call DGEMM('T','N',3,nrdofEE,3,1.d0     ,dxidx,3,shapEE,3,0.d0,shapF,3)
+         call DGEMM('N','N',3,nrdofEE,3,1.d0/rjac,dxdxi,3,curlEE,3,0.d0,curlF,3)
+
+!     ...apply permittivity
+         zshapF = cmplx(shapF,0.d0,8)
+         zcurlF = cmplx(curlF,0.d0,8)
+         call ZGEMM('C','N',3,nrdofEE,3,ZONE,za,3,zshapF,3,ZERO,epsTshapF,3)
+         call ZGEMM('N','N',3,nrdofEE,3,ZONE,za,3,zcurlF,3,ZERO,epscurlF ,3)
+
+!     ...loop through enriched H(curl) test functions
+         do k1=1,nrdofEE
+
+!        ...pickup pulled-back test functions
+            fldF(:) = shapF(:,k1);  crlF(:) = curlF(:,k1)
+            fldG(:) = fldF(:);      crlG(:) = crlF(:)
+            epsTfldF(:) = epsTshapF(:,k1)
+
+!  --- load ---
+!           $(J^{\text{imp}}, F)$ first equation RHS (with first H(curl) test function F)
+!           $(0, G)$ second equation RHS is zero
+            n = 2*k1-1
+            bload_E(n) = bload_E(n) + (fldF(1)*zJ(1)+fldF(2)*zJ(2)+fldF(3)*zJ(3)) * weight
+
+!  --- stiffness matrix ---
+!        ...loop through L2 trial shape functions
+            do k2=1,nrdofQ
+!           ...first L2 variable
+               m = (k2-1)*6
+!           ...Piola transformation
+               fldE(1:3) = shapQ(k2)/rjac; fldH = fldE
+
+!           ...$-i \omega \eps (E,F)$
+!           ...$(H,\curl F)$
+               n = 2*k1-1
+               stiff_EQ_T(m+1:m+3,n) = stiff_EQ_T(m+1:m+3,n) - fldE(:)*conjg(epsTfldF(:))*weight
+               stiff_EQ_T(m+4:m+6,n) = stiff_EQ_T(m+4:m+6,n) + fldH(:)*crlF(:)*weight
+
+!           ...$(E, \curl G)$
+!           ...$i \omega \mu (H,G)$
+               n = 2*k1
+               stiff_EQ_T(m+1:m+3,n) = stiff_EQ_T(m+1:m+3,n) + fldE(:)*crlG(:)*weight
+               stiff_EQ_T(m+4:m+6,n) = stiff_EQ_T(m+4:m+6,n) + zc1*fldH(:)*fldG(:)*weight
+            enddo !..end of loop through L2 trial functions
+
+!  --- Gram matrix ---
+!        ...loop through enriched H(curl) test functions
+            do k2=k1,nrdofEE
+               fldE(:) = shapF(:,k2); epsTfldE(:) = epsTshapF(:,k2)
+               crlE(:) = curlF(:,k2); epscrlE(:) = epscurlF(:,k2)
+
+               call dot_product(fldF,fldE, FF)
+               call dot_product(crlF,crlE, CC)
+
+!          ...accumulate for the Hermitian Gram matrix (compute upper triangular only)
+!             ------------------------
+!             | (F_i,F_j)   (F_i,G_j) |    F_i/G_i are outer loop shape functions (fldF)
+!             | (G_i,F_j)   (G_i,G_j) |    F_j/G_j are inner loop shape functions (fldE)
+!             ------------------------
+
+!             (F_j,F_i) terms = Int[F_^*i F_j] terms (G_11)
+               n = 2*k1-1; m = 2*k2-1; k = nk(n,m)
+               zaux = conjg(epsTfldF(1))*epsTfldE(1) + &
+                       conjg(epsTfldF(2))*epsTfldE(2) + &
+                       conjg(epsTfldF(3))*epsTfldE(3)
+               gramP(k) = gramP(k) + (zaux + ALPHA_NORM*FF + CC)*weight
+
+!              (G_j,F_i) terms = Int[F_^*i G_j] terms (G_12)
+               n = 2*k1-1; m = 2*k2; k = nk(n,m)
+               zaux = -(fldF(1)*epscrlE(1) + fldF(2)*epscrlE(2) + fldF(3)*epscrlE(3))
+               zcux = conjg(zc1)*(crlF(1)*fldE(1) + crlF(2)*fldE(2) + crlF(3)*fldE(3))
+               gramP(k) = gramP(k) + (zaux+zcux)*weight
+
+!           ...compute lower triangular part of 2x2 G_ij matrix
+!              only if it is not a diagonal element, G_ii
+               if (k1 .ne. k2) then
+!                 (F_j,G_i) terms = Int[G_^*i F_j] terms (G_21)
+                  n = 2*k1; m = 2*k2-1; k = nk(n,m)
+                  zaux = -(crlF(1)*epsTfldE(1) + crlF(2)*epsTfldE(2) + crlF(3)*epsTfldE(3))
+                  zcux = zc1*(fldF(1)*crlE(1) + fldF(2)*crlE(2) + fldF(3)*crlE(3) )
+                  gramP(k) = gramP(k) + (zaux+zcux)*weight
+               endif
+
+!              (G_j,G_i) terms = Int[G_^*i G_j] terms (G_22)
+               n = 2*k1; m = 2*k2; k = nk(n,m)
+               zcux = abs(zc1)**2*(fldF(1)*fldE(1) + fldF(2)*fldE(2) + fldF(3)*fldE(3))
+               gramP(k) = gramP(k) + (zcux + ALPHA_NORM*FF + CC)*weight
+         enddo; enddo !..end of loop through enriched H(curl) test functions
+      enddo !..end of loop through integration points
+\end{lstlisting}
+
+Next, we provide the code performing the boundary integration:
+\begin{lstlisting}[mathescape,caption=\file{MAXWELL/ULTRAWEAK\_DPG/}\routine{elem\_maxwell}: boundary integration]
+!  ...loop through element faces
+      do ifc=1,nrf
+
+!     ...sign factor to determine the outward normal unit vector
+         nsign = nsign_param(ntype,ifc)
+
+!     ...face type
+         ftype = face_type(ntype,ifc)
+
+!     ...face order of approximation
+         call face_order(ntype,ifc,norder, norderf)
+
+!     ...set 2D quadrature
+         INTEGRATION = NORD_ADD
+         call set_2D_int_DPG(ftype,norderf,norient_face(ifc), nrint,tloc,wtloc)
+
+!     ...loop through integration points
+         do l=1,nrint
+
+!        ...face coordinates
+            t(1:2) = tloc(1:2,l)
+
+!        ...face parametrization
+            call face_param(ntype,ifc,t, xi,dxidt)
+
+!        ...determine discontinuous H(curl) shape functions
+            call shape3EE(ntype,xi,nordP, nrdof,shapEE,curlEE)
+
+!        ...determine element H1 shape functions (for geometry)
+            call shape3DH(ntype,xi,norder,norient_edge,norient_face, nrdof,shapH,gradH)
+
+!        ...determine element H(curl) shape functions (for fluxes) on face
+            call shape3DE(ntype,xi,norderi,norient_edge,norient_face, nrdof,shapE,curlE)
+
+!        ...geometry map
+            call bgeom3D(Mdle,xi,xnod,shapH,gradH,NrdofH,dxidt,nsign, &
+                          x,dxdxi,dxidx,rjac,dxdt,rn,bjac)
+            weight = bjac*wtloc(l)
+
+!        ...pullback trial and test functions
+            call DGEMM('T','N',3,nrdofEE,3,1.d0,dxidx,3,shapEE,3,0.d0,shapF ,3)
+            call DGEMM('T','N',3,nrdofEi,3,1.d0,dxidx,3,shapE ,3,0.d0,shapFi,3)
+
+!        ...loop through enriched H(curl) test functions
+            do k1=1,nrdofEE
+               E1(1:3) = shapF(:,k1)
+
+!           ...loop through H(curl) trial functions
+               do k2=1,NrdofEi
+                  E2(1:3) = shapFi(:,k2)
+                  call cross_product(rn,E2, rntimesE)
+
+                  stiff_EE_T(2*k2-1,2*k1) = stiff_EE_T(2*k2-1,2*k1) + &
+                              weight*( E1(1)*rntimesE(1) + E1(2)*rntimesE(2) + E1(3)*rntimesE(3) )
+               enddo !..end loop through H(curl) trial functions
+            enddo !..end loop through the enriched H(curl) test functions
+         enddo !..end loop through integration points
+      enddo !..end loop through element faces
+\end{lstlisting}
+
+Finally, the code performing the construction of the DPG linear system:
+\begin{lstlisting}[mathescape,caption=\file{MAXWELL/ULTRAWEAK\_DPG/}\routine{elem\_maxwell}: constructing DPG linear system.]
+      allocate(stiff_ALL(NrTest,NrTrial+1))
+
+!  ...Total test/trial DOFs of the element
+      i1 = NrTest ; j1 = 2*NrdofEi ; j2 = 6*NrdofQ
+
+! ...Copy stiffness and load into one matrix
+      stiff_ALL(1:i1,1:j1) = transpose(stiff_EE_T(1:j1,1:i1))
+      stiff_ALL(1:i1,j1+1:j1+j2) = transpose(stiff_EQ_T(1:j2,1:i1))
+      stiff_ALL(1:i1,j1+j2+1) = bload_E(1:i1)
+
+!  ...A. Compute Cholesky factorization of Gram Matrix, $\mr{G=U^* U (=LL^*)}$
+      call ZPPTRF('U',NrTest,gramP,info)
+
+!  ...B. Solve triangular system to obtain $\mr{\tilde{B}}$, $\mr{(LX=) U^* X = [B|l]}$
+      call ZTPTRS('U','C','N',NrTest,NrTrial+1,gramP,stiff_ALL,NrTest,info)
+
+      allocate(zaloc(NrTrial+1,NrTrial+1)); zaloc = ZERO
+
+!  ...C. Matrix multiply: $\mr{B^* G^{-1} B (=\tilde{B}^* \tilde{B})}$
+      call ZHERK('U','C',NrTrial+1,NrTest,ZONE,stiff_ALL,NrTest,ZERO,zaloc,NrTrial+1)
+
+!  ...D. Fill lower triangular part of Hermitian matrix $\mr{\tilde B^* \tilde B}$
+      do i=1,NrTrial
+         zaloc(i+1:NrTrial+1,i) = conjg(zaloc(i,i+1:NrTrial+1))
+      enddo
+
+!..zaloc has now all blocks of the stiffness and load:
+!  $z_{\text{aloc}} =  \var{ALOC(1,1)} \quad \var{ALOC(1,2)} \quad \var{BLOC(1)}$
+!         $\, \var{ALOC(2,1)} \quad \var{ALOC(2,2)} \quad \var{BLOC(2)}$
+\end{lstlisting}
+
+
+
 
