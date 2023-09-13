@@ -262,6 +262,57 @@ Some of the solver interfaces take a single-character input argument \code{`H'} 
 The auxiliary data structures for assembly and linear solve of the finite element system are deallocated before the solver interface returns. On return, the finite element solution (i.e.~solution degrees of freedom) has been stored in the data structure and is available to the user for post-processing.
 
 
-%\input{Chapters/3_BASICS/comments}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Exporting Geometry Mesh and Solution to VTK}
+\label{sec:VTK}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\hp3D supports two output formats for exporting geometry meshes and solutions to VTK: XDMF and VTU. Each one has certain compatibilities with output options that are indicated in Table~\tab{paraview-compatibility}. The geometry and solution data are written as binary files via HDF5. The user interfaces for exporting mesh and solution data are provided in the \module{paraview} module and several related subroutines. Note that exporting meshes with pyramids is currently not supported but will be supported in a future release of the code.
+
+\paragraph{ParaView module.}
+\hp3D's internal ParaView module, \module{src/modules/paraview}, defines the data structures and parameters required for writing ParaView/VTK output data. To the user, most of the functionality of this module stays hidden, except for various parameters that may be defined by the user. These user-defined parameters include:
+\begin{itemize}
+	\item \var{PARAVIEW\_DIR}\\
+	Path to output directory; can be an absolute path or a path relative to the binary execution file. The output path must be valid (the module does not create new directories).
+	\item \var{VIS\_VTU} $\in \{$ \code{.true.}, \code{.false.} $\}$\\
+	Enables/disables VTU output format. By default, the output format is set to XDMF.
+	\item \var{PARAVIEW\_DUMP\_GEOM} $\in \{$ \code{.true.}, \code{.false.} $\}$\\
+	Controls whether a geometry file should be written by the ParaView output routines. For example, writing a geometry file on every call to the ParaView driver may be useful if successive solutions are visualized for an adaptive mesh. On the other hand, if visualizing a transient solution on a fixed mesh, the geometry file only needs to be written once at the initial time step. Note that if using the VTU format, this parameter is not supported and the mesh data is always written.
+	\item \var{PARAVIEW\_DUMP\_ATTR} $\in \{$ \code{.true.}, \code{.false.} $\}$\\
+	Controls whether solution data for physics attributes should be written by the ParaView output routines. In some circumstances, the user may want to output only the geometry data to visualize the finite element mesh.
+	\item \var{VLEVEL} $\in \{$ \code{`0', `1', `2', `3', `4'} $\}$\\
+	By default, \hp3D's utilities output ParaView files for visualizing linear elements; in this case, higher output resolution in \hp3D is achieved by artificially ``upscaling'' the element data. This upscaling is done by evaluating geometry and solution data at additional points within each element, corresponding to visualizing a uniformly $h$-refined element. The level of upscaling is determined by the value of the \module{paraview} module parameter \var{VLEVEL}. At most four levels of upscaling are supported.
+	\item \var{SECOND\_ORDER\_VIS} $\in \{$ \code{.true.}, \code{.false.} $\}$\\
+	Enables/disables writing second-order elements (both geometry and solution data). Note that by default, ParaView uses linear interpolation between the Lagrange points. To enable high-order interpolation in ParaView, the user needs to increase the ``Nonlinear Subdivision Level.'' If \var{SECOND\_ORDER\_VIS} is enabled, then additional upscaling is not supported (i.e., \code{\var{VLEVEL}=`0'}).
+	\item \code{\var{PARAVIEW\_LOAD}(i)} $\in \{$\code{.true.,.false.}$\},$ \code{i=1,...,\var{NRCOMS}}:\\
+	Enables/disables writing a specific solution vector. The user is advised to set the values by calling \routine{paraview\_select\_load}. By default, all entries are enabled.
+	\item \code{\var{PARAVIEW\_ATTR}(i)} $\in \{$\code{.true.,.false.}$\},$ \code{i=1,...,\var{NR\_PHYSA}}:\\
+	Enables/disables writing a specific physics variable. The user is advised to set the values by calling \routine{paraview\_select\_attr}. By default, all entries are enabled.
+	\item \code{\var{PARAVIEW\_COMP\_REAL}(i)} $\in \{$\code{.true.,.false.}$\},$ \code{i=1,...,\var{NRINDEX}}:\\
+	Enables/disables writing the real part of a specific component. The user is advised to set the values by calling \routine{paraview\_select\_comp\_real}. By default, all entries are enabled.
+	\item \code{\var{PARAVIEW\_COMP\_IMAG}(i)} $\in \{$\code{.true.,.false.}$\},$ \code{i=1,...,\var{NRINDEX}}:\\
+	Enables/disables writing the imaginary part of a specific component. The user is advised to set the values by calling \routine{paraview\_select\_comp\_imag}. By default, all entries are enabled.
+\end{itemize}
+
+\begin{table}[htb]
+\centering
+\caption{Compatibility of ParaView options with output formats}
+\label{tab:paraview-compatibility}
+\begin{tabular}{lll}
+\toprule
+Variable & XDMF format & VTU format \\
+\midrule
+\var{PARAVIEW\_DUMP\_GEOM} & yes & no (always writes mesh data) \\
+\var{VLEVEL} & yes & yes \\
+\var{SECOND\_ORDER\_VIS} & no mixed meshes & yes \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{ParaView driver.}
+The ParaView driver routine serves as an interface between the user application and the \hp3D ParaView module. The main purpose of the driver routine is to coordinate the writing of output files, i.e., writing an XML or VTU metadata file that defines the ParaView fields, initiating the writing of the geometry data, and iterating through physics variables calling various ParaView routines to assemble and write the corresponding solution data.
+
+The default ParaView driver can be found in \file{src/graphics/paraview/paraview\_driver.F90}. This \routine{paraview\_driver} routine can be called directly by the user and will, by default, write geometry and solution data as defined by the variables specified above. This driver routine may also serve as a user-customizable template for more application-specific needs.
+
+%\input{Chapters/3_BASICS/comments}
 
