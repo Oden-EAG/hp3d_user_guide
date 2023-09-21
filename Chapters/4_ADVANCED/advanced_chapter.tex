@@ -26,6 +26,12 @@ In the user-defined \routine{set\_initial\_mesh} routine, boundary conditions ar
 	system-generated flag indicating for each node \var{nod} whether a component is a Dirichlet component (\code{1}) or not (\code{0}).
 	}
 \end{itemize}
+The \hp3D code provides a routine to simplify setting boundary conditions flags for particular components on (parts of) the mesh boundary:
+\begin{itemize}
+	\item{
+		\routine{set\_bcond}: This routine sets a user-defined BC flag for a particular physics attribute component on all exterior faces of the mesh that match a certain boundary ID number. Boundary IDs for faces are defined in the mesh input file and generated when reading the mesh. If no boundary IDs are specified, then by default all boundary IDs are \code{0}.
+	}
+\end{itemize}
 
 \subsection{Neumann boundary condition}
 \label{sec:impedance}

@@ -79,8 +79,12 @@ These global variables, set directly by the user, affect the library behavior. F
 			Defines the maximum polynomial order of approximation allowed to be used anywhere in the mesh. This parameter is used internally for preallocating data structures and \emph{must} be changed before compiling the \hp3D library. The maximum order currently supported is \code{\var{MAXP}=9}. The user is advised to compile the library with a lower value of \var{MAXP}, depending on the maximum anticipated order used in computation, for more efficient low-order computation.
 			}
 			\item {\var{NRCOMS} $\in \{$\code{1,2, ...}$\}$:\\
-			Number of copies of each variable stored in the data structure, e.g.~multiple copies may be needed when computing time-stepping solutions. This parameter may be set at runtime before mesh initialization by calling the \routine{set\_parameters} routine.
+			Number of solution component sets (i.e., copies of each variable) stored in the data structure. Multiple copies may be useful when computing time-stepping or nonlinear solutions where keeping previous solution iterates is required.\footnote{Another option for keeping extra solution components is simply defining extra variables in the physics input file. However, defining multiple copies of the entire solution component set may be more convenient for some use cases.} This parameter may be set at runtime before mesh initialization by calling the \routine{set\_parameters} routine.
 			}
+			\item {\var{N\_COMS}} $\in \{$\code{1,2, ..., \var{NRCOMS}}$\}$:\\
+			The solution component set the user wishes to compute, assemble and solve for (if using \code{\var{NRCOMS}>1}).\footnote{Alternatively, one can use the \routine{copy\_coms} routine to transfer solution DOFs from one component set into another.} Currently, only \code{\var{N\_COMS}=1} is supported but this feature will be enabled in a future release.
+			\item {\var{NRRHS}} $\in \{$\code{1,2, ...}$\}$:\\
+			Number of right-hand sides (``loads'') defined for the problem. For each additional load, additional solution variables are allocated and solved for. This parameter may be set at runtime before mesh initialization by calling the \routine{set\_parameters} routine. Currently, only \code{\var{NRRHS}=1} is supported but this feature will be enabled in a future release.
 		\end{itemize}
 	}
 	\item
@@ -88,7 +92,7 @@ These global variables, set directly by the user, affect the library behavior. F
 		\code{module} \module{paraview}: 
 		\begin{itemize}
 			\item {\var{VLEVEL} $\in \{$\code{0,1,2,3,4}$\}$:\\
-			Determines how refined the mesh output is when exporting geometry and solution data to ParaView/vtk. If \code{\var{VLEVEL}=0}, the mesh is outputted ``as is'' with the geometry and solution linearly interpolated for the ParaView plot. Each ``upscaling'' of \var{VLEVEL} increases the resolution by one refinement level.
+			Determines how refined the mesh output is when exporting geometry and solution data to ParaView/vtk. If \code{\var{VLEVEL}=0}, the mesh is outputted ``as is'' with the geometry and solution linearly interpolated for the ParaView plot. Each ``upscaling'' of \var{VLEVEL} increases the resolution by one refinement level. See Section~\ref{sec:VTK} for further details and additional user-defined ParaView module variables.
 			}
 		\end{itemize}
 	}
@@ -286,7 +290,7 @@ The auxiliary data structures for assembly and linear solve of the finite elemen
 	Enables/disables writing second-order elements (both geometry and solution data). Note that by default, ParaView uses linear interpolation between the Lagrange points. To enable high-order interpolation in ParaView, the user needs to increase the ``Nonlinear Subdivision Level.'' If \var{SECOND\_ORDER\_VIS} is enabled, then additional upscaling is not supported (i.e., \code{\var{VLEVEL}=`0'}).
 	\item \var{PARAVIEW\_TIME}\\
 	If set by the user, this real-valued parameter is used as a timestamp for the current solution output.
-	\item \code{\var{PARAVIEW\_LOAD}(i)} $\in \{$\code{.true.,.false.}$\},$ \code{i=1,...,\var{NRCOMS}}\\
+	\item \code{\var{PARAVIEW\_LOAD}(i)} $\in \{$\code{.true.,.false.}$\},$ \code{i=1,...,\var{NRRHS}}\\
 	Enables/disables writing a specific solution vector. The user is advised to set the values by calling \routine{paraview\_select\_load}. By default, all entries are enabled.
 	\item \code{\var{PARAVIEW\_ATTR}(i)} $\in \{$\code{.true.,.false.}$\},$ \code{i=1,...,\var{NR\_PHYSA}}\\
 	Enables/disables writing a specific physics variable. The user is advised to set the values by calling \routine{paraview\_select\_attr}. By default, all entries are enabled.
