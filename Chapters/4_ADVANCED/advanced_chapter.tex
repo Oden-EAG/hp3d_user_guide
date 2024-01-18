@@ -22,8 +22,8 @@ In the user-defined \routine{set\_initial\_mesh} routine, boundary conditions ar
 	\var{ELEMS(iel)\%bcond(1:6,1:NRINDEX)} $\in \{$ \code{0,1, ..., 9} $\}$:\\
 	user-defined value indicating for faces of each initial mesh element \var{iel} whether a component is a free component (\code{0}), a Dirichlet component (\code{1}), or has a custom BC (\code{2, ..., 9}).
 	} \item{
-	\var{NODES(nod)\%bcond(1:NRINDEX)} $\in \{$ \code{0,1} $\}$:\\
-	system-generated flag indicating for each node \var{nod} whether a component is a Dirichlet component (\code{1}) or not (\code{0}).
+	\var{NODES(nod)\%bcond(1:NRINDEX\_HEV)} $\in \{$ \code{0,1} $\}$:\\
+	system-generated flag indicating for each node \var{nod} whether a component is a Dirichlet component (\code{1}) or not (\code{0}). Only stored for $H^1$, $H(\tcurl)$, and $H(\tdiv)$ components.
 	}
 \end{itemize}
 The \hp3D code provides a routine to simplify setting boundary conditions flags for particular components on (parts of) the mesh boundary:

@@ -29,9 +29,13 @@ Several system modules (e.g.~\module{physics}) provide useful variables to the l
 			This global integer variable defines the total number of physics variables (or physics attributes) that have been requested by the user and are stored in the data structure. Note that each physics attribute may have multiple components. Moreover, a physics attribute may only be partially supported (i.e.~defined over a part of the mesh).
 			} \item{ \var{NR\_COMP}\code{(i), i=1,...,\var{NR\_PHYSA}}:\\
 			This global integer array defines, for each physics variable, how many components have been requested by the user. Depending on the energy space, a component may be scalar-valued ($H^1$, $L^2$) or vector-valued ($H(\tcurl)$, $H(\tdiv)$).
+			} \item{ \var{NRHVAR}, \var{NREVAR}, \var{NRVVAR}, \var{NRQVAR}:\\
+			These global integers define the total number of $H^1$, $H(\tcurl)$, $H(\tdiv)$, and $L^2$ components, respectively, that have been requested by the user.
 			} \item{ \var{NRINDEX}:\\
-			This global integer defines the total number of components that have been requested by the user. That is, it is the sum of the entries in the global array \var{NR\_COMP(:)}.
-		}
+			This global integer defines the total number of components that have been requested by the user. That is, it is the sum of \var{NRHVAR}, \var{NREVAR}, \var{NRVVAR}, and \var{NRQVAR}, or equivalently the sum of entries in the global array \var{NR\_COMP(:)}.
+			} \item{ \var{NRINDEX\_HEV}:\\
+			This global integer defines the total number of $H^1$, $H(\tcurl)$, and $H(\tdiv)$ components that have been requested by the user. That is, it is the sum of \var{NRHVAR}, \var{NREVAR}, and \var{NRVVAR}.
+			}
 		\end{itemize}
 	}
 	\item
@@ -92,7 +96,7 @@ These global variables, set directly by the user, affect the library behavior. F
 		\code{module} \module{paraview}: 
 		\begin{itemize}
 			\item {\var{VLEVEL} $\in \{$\code{0,1,2,3,4}$\}$:\\
-			Determines how refined the mesh output is when exporting geometry and solution data to ParaView/vtk. If \code{\var{VLEVEL}=0}, the mesh is outputted ``as is'' with the geometry and solution linearly interpolated for the ParaView plot. Each ``upscaling'' of \var{VLEVEL} increases the resolution by one refinement level. See Section~\ref{sec:VTK} for further details and additional user-defined ParaView module variables.
+			Determines how refined the mesh output is when exporting geometry and solution data to ParaView/VTK. If \code{\var{VLEVEL}=0}, the mesh is outputted ``as is'' with the geometry and solution linearly interpolated for the ParaView plot. Each ``upscaling'' of \var{VLEVEL} increases the resolution by one refinement level. See Section~\ref{sec:VTK} for further details and additional user-defined ParaView module variables.
 			}
 		\end{itemize}
 	}
