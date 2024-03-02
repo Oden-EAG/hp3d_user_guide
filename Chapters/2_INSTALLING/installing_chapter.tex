@@ -11,7 +11,7 @@ An application written for the \hp3D software is compiled in two steps. First, t
 
 Under most circumstances, the user will not need to recompile the \hp3D library since changes in the application do not affect the library source code. Therefore, most users will only compile the \hp3D library once, and from then on exclusively modify and compile the application code.
 
-In some instances, the user may wish to change the dependencies of the library, e.g., linking to a new version of a third-party package, which will require recompilation of the library. Another situation for which the library must be recompiled is if the user chooses to toggle one of the library-wide preprocessor variables (e.g., \var{DEBUG}) or modify the compiler arguments. It is recommended that \code{`make clean'} is always executed before recompiling the \hp3D library.
+In some instances, the user may wish to change the dependencies of the library, e.g., linking to a new version of a third-party package, which will require recompilation of the library. Another situation for which the library must be recompiled is if the user chooses to toggle one of the library-wide preprocessor variables (e.g., \var{HP3D\_DEBUG}) or modify the compiler arguments. It is recommended that \code{`make clean'} is always executed before recompiling the \hp3D library.
 
 The user can download the \hp3D GitHub repository via https or ssh:
 \begin{itemize}
@@ -41,14 +41,14 @@ The configure file \file{m\_options} (see next section) must link to valid paths
 \begin{itemize}
 	\itemsep 0pt
 	\item Intel MKL [optional]
-	\item X11
-	\item PETSc (all following packages can be installed with PETSc)
-	\item HDF5/pHDF5
-	\item MUMPS
-	\item Metis/ParMetis
-	\item Scotch/PT-Scotch
+	\item X11 [optional]
+	\item PETSc \cite{petsc-user-ref} (all following packages can be installed with PETSc)
+	\item HDF5/pHDF5 \cite{hdf5}
+	\item MUMPS \cite{amestoy2001mumps}
+	\item Metis/ParMetis \cite{parmetis}
+	\item Scotch/PT-Scotch \cite{pt-scotch}
 	\item PORD
-	\item Zoltan
+	\item Zoltan \cite{ZoltanOverviewArticle2002}
 \end{itemize}
 
 \subsection{Configure file}
@@ -59,40 +59,45 @@ The user must create a configure file \file{trunk/m\_options}, which provides in
 	\itemsep 0pt
 	\item{
 		Copy one of the existing \file{m\_options} files from the example files in \file{hp3d/trunk/m\_options\_files/} into \file{hp3d/trunk/}. For example:\\ 
-		\code{`cp m\_options\_files/m\_options\_TACC\_intel19 ./m\_options'}.
+		\code{`cp m\_options\_files/m\_options\_linux ./m\_options'}, or\\
+		\code{`cp m\_options\_files/m\_options\_macos ./m\_options'}
 	} \item{
 		Modify the \file{m\_options} file to set the correct path to the main directory:\\ 
-		Set the \var{HP3D\_BASE\_PATH} to the \emph{absolute} path of the \file{hp3d/trunk/}.
+		Set the \var{HP3D\_BASE\_PATH} to the \emph{absolute} path of \file{hp3d/trunk/}.
 	} \item{
-		To compile the library, type \code{`make'} in \file{hp3d/trunk/}. Before compiling, link to the external libraries by setting the correct paths in the \file{m\_options} file---e.g.~\var{PETSC\_LIB}, \var{PETSC\_INC}---as well as setting compiler options by modifying the \file{m\_options} file as described below.
+		To compile the library, type \code{`make'} in \file{hp3d/trunk/}. Before compiling, link to the external libraries by setting the correct paths in the \file{m\_options} file. The default configuration files \code{m\_options\_linux} and \code{m\_options\_macos} assume that PETSc was configured with all of the necessary dependencies so that the user only needs to set \var{PETSC\_DIR} and \var{PETSC\_ARCH} which will then use the library and include paths from the corresponding PETSc build. Additionally, the user needs to set compiler options (preprocessing flags) by modifying the \file{m\_options} file as described below.
+	} \item{
+		After building the library, the user can check its basic functionality via \code{`make check'} or perform more extensive tests via \code{`make test'}.
 	}
 \end{enumerate}
 
-The library compilation is governed by the user-defined preprocessing flags \var{COMPLEX} and \var{DEBUG}:
+The library compilation is governed by the user-defined preprocessing flags \var{HP3D\_COMPLEX} and \var{HP3D\_DEBUG}:
 \begin{itemize}
 	\itemsep 0pt
-	\item{ \code{\var{COMPLEX} = 0}:\\
+	\item{ \code{\var{HP3D\_COMPLEX} = 0}:\\
 	Stiffness matrix, load vector(s) and solution DOFs are real-valued.\\
-	Code blocks within: \code{\#if C\_MODE ... \#endif}, are disabled.
-	} \item{ \code{\var{COMPLEX} = 1}:\\
+	Code blocks within: \code{\#if HP3D\_COMPLEX ... \#endif}, are disabled.
+	} \item{ \code{\var{HP3D\_COMPLEX} = 1}:\\
 	Stiffness matrix, load vector(s) and solution DOFs are complex-valued.\\
-	Code blocks within: \code{\#if C\_MODE ... \#endif}, are enabled.
-	} \item{ \code{\var{DEBUG} = 0}:\\
+	Code blocks within: \code{\#if HP3D\_COMPLEX ... \#endif}, are enabled.
+	} \item{ \code{\var{HP3D\_DEBUG} = 0}:\\
 	Compiler uses optimization flags and the library performs only minimal checks during the computation.\\
-	Code blocks within: \code{\#if DEBUG\_MODE ... \#endif}, are disabled.
-	} \item{ \code{\var{DEBUG} = 1}:\\
+	Code blocks within: \code{\#if HP3D\_DEBUG ... \#endif}, are disabled.
+	} \item{ \code{\var{HP3D\_DEBUG} = 1}:\\
 	Compiler uses debug flags, and the library performs additional checks during the computation.\\
-	Code blocks within: \code{\#if DEBUG\_MODE ... \#endif}, are enabled.
+	Code blocks within: \code{\#if HP3D\_DEBUG ... \#endif}, are enabled.
 	}
 \end{itemize}
-All computations in \hp3D are executed in double-precision arithmetic; that is, depending on the \var{COMPLEX} flag, variables are declared as \code{real(8)} or \code{complex(8)}, respectively. \hp3D provides a generic variable declaration \var{VTYPE}, which may be employed by the user in the application, defaulting to either real- or complex-type depending on whether the library was compiled in real or complex mode. The user should keep in mind some external library paths may also differ depending on real- and complex-valued computation. When compiling the \hp3D library, the library path is created under either \file{hp3d/complex/} or \file{hp3d/real/}, depending on the choice of preprocessing flag \var{COMPLEX}.
+All computations in \hp3D are executed in double-precision arithmetic; that is, depending on the \var{HP3D\_COMPLEX} flag, variables are declared as \code{real(8)} or \code{complex(8)}, respectively. \hp3D provides a generic variable declaration \var{VTYPE}, which may be employed by the user in the application, defaulting to either real- or complex-type depending on whether the library was compiled in real or complex mode. The user should keep in mind some external library paths may also differ depending on real- and complex-valued computation. When compiling the \hp3D library, the library path is created under either \file{hp3d/complex/} or \file{hp3d/real/}, depending on the choice of preprocessing flag \var{HP3D\_COMPLEX}.
 
 Support for OpenMP threading is optional and can be enabled/disabled via preprocessing flag \var{HP3D\_USE\_OPENMP}. Additional preprocessing flags for enabling/disabling third-party libraries:
 \begin{itemize}
-	\item{\code{\var{HP3D\_USE\_INTEL\_MKL} = 0}:\\
-	Dependency on Intel MKL package is disabled.
-	} \item{\code{\var{HP3D\_USE\_INTEL\_MKL} = 1}:\\
-	Dependency on Intel MKL package is enabled, providing additional solver options to the user (e.g.~Intel MKL PARDISO).}
+	\item{\code{\var{HP3D\_USE\_INTEL\_MKL} = 0/1}:\\
+	Disable/enable dependency on Intel MKL package, used for providing additional solver options to the user (e.g.~Intel MKL PARDISO).
+	} \item{\code{\var{HP3D\_USE\_MPI\_F08} = 0/1}:\\
+	Disable/enable Fortran 2008 MPI binding (\code{module \module{mpi\_f08}}). If disabled, Fortran 90 MPI binding (\code{module \module{mpi}}) is used.\footnote{The PETSc and MUMPS solver interfaces in \hp3D are currently using F90 binding for PETSC's KSP and MUMPS's parallel solver interface, independent of the \var{HP3D\_USE\_MPI\_F08} flag.}
+	} \item{\code{\var{HP3D\_USE\_X11} = 0/1}:\\
+	Disable/enable dependency on X11, used for basic built-in graphics tools.}
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

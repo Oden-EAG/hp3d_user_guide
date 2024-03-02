@@ -1,4 +1,16 @@
 
+@misc{venkat2024fft,
+      title={{Fast and Scalable FFT-Based Multi-GPU Algorithms for Hessian-Vector Products Arising in Inverse Problems Governed by Autonomous Dynamical Systems}},
+      author={Sreeram Venkat and Milinda Fernando and Stefan Henneking and Omar Ghattas},
+      year={2024},
+      note={In Preparation}}
+
+@misc{henneking2024autonomous,
+      title={{Fast and Efficient Bayesian Inference of High-Dimensional Parameter Fields for Autonomous Systems}},
+      author={Stefan Henneking and Omar Ghattas and Sreeram Venkat and Milinda Fernando},
+      year={2024},
+      note={In Preparation}}
+
 @article{badger2020fast,
 	Title = {Sum factorization for fast integration of {DPG} matrices on prismatic elements},
 	Author = {Badger, Jacob and Henneking, Stefan and Demkowicz, Leszek},
@@ -50,6 +62,12 @@
 	publisher = {Springer},
 	pages = {349--360}}
 
+@article{henneking2024hp3d,
+	title = {{$hp$3D}: A Scalable MPI/OpenMP $hp$-Adaptive Finite Element Software Library for Complex Multiphysics Applications},
+	author = {Henneking, Stefan and Badger, Jacob and Petrides, Socratis and Fuentes, Federico and Demkowicz, Leszek},
+	journal = JOSS,
+	year = {2024}}
+
 @article{badger2023scalable,
 	title = {Scalable {DPG} Multigrid Solver for {Helmholtz} Problems: A Study on Convergence},
 	author = {Badger, Jacob and Henneking, Stefan and Petrides, Socratis and Demkowicz, Leszek},
@@ -58,6 +76,12 @@
 	pages = {81--92},
 	year = {2023},
 	publisher = {Elsevier}}
+
+@phdthesis{chakraborty2022phd,
+  title={Optimal approximation spaces for discontinuous {Petrov--Galerkin} schemes with optimal test functions},
+  author={Chakraborty, Ankit},
+  school={Rheinisch-Westf\"alische Technische Hochschule Aachen},
+  year={2022}}
 
 @article{chakraborty2023hp,
 	author = {Chakraborty, Ankit and Henneking, Stefan and Demkowicz, Leszek},
@@ -71,10 +95,10 @@
 	Year = {2022},
 	Journal={arXiv preprint arXiv:2207.12211}}
 
-@misc{henneking2023tmi,
+@misc{henneking2024tmi,
 	title = {Numerical simulation of transverse mode instability with a full envelope {DPG Maxwell} model},
 	author = {Henneking, Stefan and Badger, Jacob and Grosek, Jacob and Demkowicz, Leszek},
-	year = {2023},
+	year = {2024},
 	note = {In preparation.}}
 
 @article{melenk2023waveguide1,
@@ -89,17 +113,11 @@
 	title = {Stability Analysis for Electromagnetic Waveguides. {P}art 2: Non-Homogeneous Waveguides},
 	year = {2023}}
 
-@article{hpUserManual,
-	Author = {Henneking, Stefan and Demkowicz, Leszek},
-	Title = {{$hp$3D User Manual}},
-	Year = {2022},
-	Journal={arXiv preprint arXiv:2207.12211}}
-
 @book{hpbook3,
-	Author = {Henneking, Stefan and Demkowicz, Leszek and Petrides, Socratis and Badger, Jacob and Fuentes, Federico and Keith, Brendan},
+	Author = {Henneking, Stefan and Demkowicz, Leszek and Petrides, Socratis and Fuentes, Federico and Keith, Brendan and Gatto, Paolo},
 	Publisher = {In preparation},
 	Title = {{Computing with $hp$ Finite Elements. III. Parallel $hp$3D Code}},
-	Year = {2023}}
+	Year = {2024}}
 
 @book{hpbook2,
 	Author = {Demkowicz, Leszek and Kurtz, Jason and Pardo, David and Paszy\'{n}ski, Maciej and Rachowicz, Waldemar and Zdunek, Adam},
@@ -518,14 +536,21 @@
     title = "{Hierarchical data format version 5}",
     url = {http://www.hdfgroup.org/HDF5}}
 
-@techreport{petsc-user-ref,
-	Author = {S. Balay and S. Abhyankar and M. Adams and J. Brown and P. Brune and K. Buschelman and L. Dalcin and A. Dener and V. Eijkhout and W. Gropp and D. Karpeyev and D. Kaushik and M. Knepley and D. May and L. McInnes and R. Mills and T. Munson and K. Rupp and P. Sanan and B. Smith and S. Zampini and H. Zhang and H. Zhang},
-	Institution = {Argonne National Laboratory},
-	Number = {ANL-95/11 - Revision 3.13},
-	Title = {{PETSc} users manual},
-	Url = {https://www.mcs.anl.gov/petsc},
-	Year = 2020,
-	Bdsk-Url-1 = {https://www.mcs.anl.gov/petsc}}
+@TechReport{petsc-user-ref,
+  author        = {Satish Balay and Shrirang Abhyankar and Mark~F. Adams and Steven Benson and Jed
+                  Brown and Peter Brune and Kris Buschelman and Emil Constantinescu and Lisandro
+                  Dalcin and Alp Dener and Victor Eijkhout and Jacob Faibussowitsch and William~D.
+                  Gropp and V\'{a}clav Hapla and Tobin Isaac and Pierre Jolivet and Dmitry Karpeev
+                  and Dinesh Kaushik and Matthew~G. Knepley and Fande Kong and Scott Kruger and
+                  Dave~A. May and Lois Curfman McInnes and Richard Tran Mills and Lawrence Mitchell
+                  and Todd Munson and Jose~E. Roman and Karl Rupp and Patrick Sanan and Jason Sarich
+                  and Barry~F. Smith and Stefano Zampini and Hong Zhang and Hong Zhang and Junchao
+                  Zhang},
+  title         = {{PETSc/TAO} Users Manual},
+  institution   = {Argonne National Laboratory},
+  number        = {ANL-21/39 - Revision 3.20},
+  doi           = {10.2172/2205494},
+  year          = {2023}}
 
 @article{schoberl1997netgen,
 	Author = {Sch{\"o}berl, Joachim},
@@ -566,11 +591,12 @@
 	Title = {Functional analysis for the applied mathematician},
 	Year = {2010}}
 
-@misc{demkowicz2020fem,
-	Author = {Demkowicz, Leszek},
-	Note = {Lecture notes; The University of Texas at Austin},
-	Title = {Mathematical theory of finite elements},
-	Year = {2020}}
+@book{demkowicz2023fem,
+	author = {Demkowicz, Leszek},
+	title = {Mathematical Theory of Finite Elements},
+	publisher = {Society for Industrial and Applied Mathematics},
+	year = {2023},
+	doi = {10.1137/1.9781611977738}}
 
 @misc{demkowicz2018spaces,
 	Author = {Demkowicz, Leszek},
@@ -597,8 +623,18 @@
 	year={2018},
 	publisher={Elsevier}}
 
+@article{dahmen2012adaptive,
+  title={Adaptive Petrov--Galerkin methods for first order transport equations},
+  author={Dahmen, Wolfgang and Huang, Chunyan and Schwab, Christoph and Welper, Gerrit},
+  journal=JNA,
+  volume={50},
+  number={5},
+  pages={2420--2445},
+  year={2012},
+  publisher={SIAM}}
+
 @article{cohen2012adaptivity,
-	Author = {Cohen, A. and Dahmen, W. and Welper, G.},
+	Author = {Cohen, Albert and Dahmen, Wolfgang and Welper, Gerrit},
 	Journal = MMNA,
 	Number = {5},
 	Pages = {1247--1273},
@@ -790,7 +826,7 @@
 
 @article{demkowicz2017dpg,
 	Author = {Demkowicz, Leszek and Gopalakrishnan, Jay},
-	Title = {Discontinuous {Petrov--Galerkin} {(DPG)} meth\-od},
+	Title = {Discontinuous {Petrov--Galerkin} {(DPG)} method},
 	Journal = {Encyclopedia of Computational Mechanics Second Edition},
 	Pages = {1--15},
 	Publisher = {John Wiley \& Sons},
