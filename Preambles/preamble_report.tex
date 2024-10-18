@@ -45,7 +45,8 @@
 \usepackage[
 	backend=bibtex,
 	giveninits=true,
-	maxbibnames=99]{biblatex}
+	maxbibnames=99,
+	maxcitenames=99]{biblatex}
 \addbibresource{References/journals-full.bib}
 \addbibresource{References/ref_stefan.bib}
 %=====================================================%
@@ -183,8 +184,8 @@
 %=====================================================%
 % Rule of thumb: load hyperref as the last package; other packages might otherwise redefine 'footnote', etc.
 %\usepackage[pdftex]{hyperref}
-\usepackage[hidelinks]{hyperref}
-\hypersetup{colorlinks=false}
+\usepackage[pdftex,hidelinks]{hyperref}
+\hypersetup{colorlinks=true, citecolor=blue, linkcolor=black, urlcolor=blue}
 
 %=====================================================%
 % Equation numbering

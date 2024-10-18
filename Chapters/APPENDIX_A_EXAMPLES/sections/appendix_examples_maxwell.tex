@@ -148,8 +148,8 @@ The broken ultraweak Maxwell formulation is given by:
 \[
 \left\{
 \begin{split}
-	\bs E, \bs H \in \bs{L^2}(\Omega), \hat{\bs E}, \hat{\bs H} \in H^{-1/2}(\tcurl, \Gammah): \bs n \times \bs E &= \bs n \times \bs E_0 \text{ on } \Gamma \, , \\
-	(\bs H, \hcurl \bs F) - ((i \omega \eps + \sigma) \bs E , \bs F)
+	\bs E, \bs H \in \bs{L^2}(\Omega), \hat{\bs E}, \hat{\bs H} \in H^{-1/2}(\tcurl, \Gammah): \bs n \times \hat{\bs E} &= \bs n \times \bs E_0 \text{ on } \Gamma \, , \\
+	(\bs H, \hcurl \bs F) + \lb \bs n \times \hat{\bs H}, \bs F \rb_{\Gammah} - ((i \omega \eps + \sigma) \bs E , \bs F)
 	&= (\bs J^{\text{imp}}, \bs F) &\quad \bs F \in \hHcurl \, , \\
 	(\bs E, \hcurl \bs G) + \lb \bs n \times \hat{\bs E}, \bs G \rb_{\Gammah} + (i \omega \mu \bs H, \bs G)
 	&= \bs 0 &\quad \bs G \in \hHcurl \, .
@@ -164,7 +164,7 @@ Before looking at this section, the reader is encouraged to review the simpler D
 	\| \hcurl \bs G + (i \omega \bar{\eps} - \sigma) \bs F \|^2 +
 	\alpha ( \| \bs F \|^2 + \| \bs G \|^2) \, ,
 \]
-where $\bar{\cdot}$ indicates complex-conjugate, and $\alpha > 0$ is a scaling constant. See, e.g., \cite{melenk2023waveguide1, demkowicz2023waveguide2}, for both theoretical considerations and practical implications in terms of stability of choosing a proper value for $\alpha$.
+where $\bar{\cdot}$ indicates complex-conjugate, and $\alpha > 0$ is a scaling constant. See, e.g., \cite{melenk2023waveguide1, demkowicz2024waveguide2}, for both theoretical considerations and practical implications in terms of stability of choosing a proper value for $\alpha$.
 
 The implementation is provided in \file{problems/MAXWELL/ULTRAWEAK\_DPG}.
 
